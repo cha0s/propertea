@@ -198,12 +198,13 @@ measure('allocate native');
   for (let i = 0; i < N; ++i) {
     setting[i] = pool.allocate();
   }
+  const r = Math.random();
   warm(() => {
-    exports.test(1);
+    exports.thisIsAWasmTest(r);
     clear(pool);
   }, setting);
   start = performance.now();
   pool.views.dirty.fill(0)
-  exports.test(1);
+  exports.thisIsAWasmTest(r);
   measure('\x1b[93mset allocated (buffer)\x1b[0m');
 }

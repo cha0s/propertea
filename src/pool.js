@@ -1,4 +1,4 @@
-import {Initialize} from './proxy.js';
+import {ProxyProperty, SetWithDefaults} from './proxy.js';
 import {registry} from './register.js';
 
 export const Index = Symbol('Index');
@@ -8,12 +8,10 @@ export class Pool {
   data = {
     memory: new WebAssembly.Memory({initial: 0}),
     nextGrow: 0,
-    width: 0,
   };
   dirty = {
     memory: new WebAssembly.Memory({initial: 0}),
     nextGrow: 0,
-    width: 0,
   };
   freeList = [];
   length = new WebAssembly.Global({mutable: true, value: 'i32'}, 0);
@@ -26,18 +24,19 @@ export class Pool {
   constructor(blueprint, params = {}) {
     this.blueprint = blueprint;
     if (!registry[blueprint.type]) {
-      throw new TypeError(`Propertea: '${blueprint.type}' not registered`);
+      throw new TypeError(`Propertea(pool): blueprint type '${blueprint.type}' not registered`);
     }
     const property = new registry[blueprint.type](blueprint);
+    if (!(property instanceof ProxyProperty)) {
+      throw new TypeError(`Propertea(pool): blueprint type '${blueprint.type}' not a proxy type`);
+    }
     const {onDirty = true} = params;
     if (onDirty) {
-      this.dirty.width = property.dirtyWidth;
       this.views.dirty = new Uint8Array(0);
       this.views.onDirty = onDirty;
     }
     // mapped or concrete instance based on data width
-    this.data.width = property.dataWidth;
-    this.Proxy = class extends property[this.data.width > 0 ? 'map' : 'concrete'](this.views) {
+    this.Proxy = class extends property[property.dataWidth > 0 ? 'map' : 'concrete'](this.views) {
       constructor(index) {
         super(index);
         this[Index] = index;
@@ -46,7 +45,7 @@ export class Pool {
     this.property = property;
   }
 
-  allocate(values, initialize) {
+  allocate(value, initialize) {
     let proxy;
     // free instance? use it
     if (this.freeList.length > 0) {
@@ -56,18 +55,16 @@ export class Pool {
       const {data, dirty, views} = this;
       const {length} = this.proxies;
       // allocate more data buffer if we need it
-      if (this.data.width > 0) {
-        if (length === data.nextGrow) {
-          data.memory.grow(1);
-          views.data = new DataView(data.memory.buffer);
-          data.nextGrow = Math.floor(data.memory.buffer.byteLength / this.data.width);
-        }
+      if (this.property.dataWidth > 0 && length === data.nextGrow) {
+        data.memory.grow(1);
+        views.data = new DataView(data.memory.buffer);
+        data.nextGrow = Math.floor(data.memory.buffer.byteLength / this.property.dataWidth);
       }
       // allocate more dirty buffer if we need it
       if (this.views.onDirty && length === dirty.nextGrow) {
         dirty.memory.grow(1);
         views.dirty = new Uint8Array(dirty.memory.buffer);
-        dirty.nextGrow = Math.floor(dirty.memory.buffer.byteLength / (this.dirty.width / 8));
+        dirty.nextGrow = Math.floor(dirty.memory.buffer.byteLength / (this.property.dirtyWidth / 8));
       }
       // allocate a new proxy
       proxy = new this.Proxy(length);
@@ -76,7 +73,7 @@ export class Pool {
     // set and initialize
     this.proxies[proxy[Index]] = proxy;
     initialize?.(proxy);
-    proxy[Initialize](values);
+    proxy[SetWithDefaults](value);
     return proxy;
   }
 

@@ -1,7 +1,7 @@
 import {Codecs} from 'crunches';
 
 import {Pool} from './pool.js';
-import {Diff, Initialize, MarkClean, ProxyProperty, Set as ProperteaSet, ToJSON} from './proxy.js';
+import {Diff, MarkClean, ProxyProperty, Set as ProperteaSet, SetWithDefaults, ToJSON} from './proxy.js';
 import {registry} from './register.js';
 
 const Key = Symbol('Index');
@@ -12,7 +12,7 @@ registry.map = class extends ProxyProperty {
   constructor(blueprint) {
     super(blueprint);
     if (!registry[blueprint.value.type]) {
-      throw new TypeError(`Propertea: '${blueprint.value.type}' not registered`);
+      throw new TypeError(`Propertea(map): value type '${blueprint.value.type}' not registered`);
     }
     const property = new registry[blueprint.value.type](blueprint.value);
     this.property = property;
@@ -41,8 +41,8 @@ registry.map = class extends ProxyProperty {
           },
         },
         {
-          onDirty: (bit, proxy, key, property) => {
-            views.onDirty?.(bit, proxy, key, property);
+          onDirty: (bit, proxy) => {
+            views.onDirty?.(bit, proxy);
             const index = Math.floor(bit / dirtyWidth);
             if (index < pool.length.value) {
               pool.proxies[index][MapSymbol].dirty.add(pool.proxies[index][Key]);
@@ -128,7 +128,7 @@ registry.map = class extends ProxyProperty {
         }
       };
     }
-    MapProxy.prototype[Initialize] = function() {};
+    MapProxy.prototype[SetWithDefaults] = function() {};
     MapProxy.prototype[ProperteaSet] = function(entries) {
       this.clear();
       for (const entry of entries) {

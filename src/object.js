@@ -1,6 +1,6 @@
 import {Codecs} from 'crunches';
 
-import {Diff, Initialize, MarkClean, ProxyProperty, Set, ToJSON, ToJSONWithoutDefaults} from './proxy.js';
+import {Diff, MarkClean, ProxyProperty, Set, SetWithDefaults, ToJSON, ToJSONWithoutDefaults} from './proxy.js';
 import {registry} from './register.js';
 
 const DataOffset = Symbol('DataOffset');
@@ -8,6 +8,10 @@ const DirtyOffset = Symbol('DirtyOffset');
 const Instance = Symbol('Instance');
 
 const nop = () => {};
+
+function codegen(code, context = {}) {
+  return (new Function(Object.keys(context).join(','), code))(...Object.values(context));
+}
 
 registry.object = class extends ProxyProperty {
 
@@ -20,7 +24,9 @@ registry.object = class extends ProxyProperty {
       const propertyBlueprint = blueprint.properties[key];
       // object shape accomodates proxy instance
       if (!registry[propertyBlueprint.type]) {
-        throw new TypeError(`Propertea: '${propertyBlueprint.type}' not registered`);
+        throw new TypeError(
+          `Propertea(object): property type '${propertyBlueprint.type}' not registered`
+        );
       }
       class ObjectProperty extends registry[propertyBlueprint.type] {
         [Instance] = Symbol(key);
@@ -38,8 +44,6 @@ registry.object = class extends ProxyProperty {
 
   concrete(views = {}, isRoot = true) {
     const {blueprint, properties} = this;
-    const onDirty = views.onDirty ?? true;
-    const onDirtyCallback = 'function' === typeof onDirty ? onDirty : nop;
     // compute children
     const children = {};
     for (const key in properties) {
@@ -50,54 +54,48 @@ registry.object = class extends ProxyProperty {
     }
     const Proxy = this.generateProxy({children, isRoot, views});
     let dirtyIndex = 0;
-    const bound = {
-      children,
-      DataOffset,
-      DirtyOffset,
-      Instance,
-      onDirtyCallback,
-      properties,
-      property: this,
-      Proxy,
-      Set,
-      views,
-    };
-    const ConcreteProxy = (new Function(Object.keys(bound).join(','), `
-      return class ConcreteProxy extends Proxy {
-        ${Object.entries(properties).map(([key, property]) => {
-          const props = `
-            get ['${key}']() { return this[property[Instance]]['${key}']; }
-            ${
-              property instanceof ProxyProperty
-                ? `set ['${key}'](value) { this[property[Instance]]['${key}'][Set](value); }`
-                : (
-                  views.dirty
-                    ? `
-                      set ['${key}'](value) {
-                        // remember
-                        const previous = this[property[Instance]]['${key}'];
-                        this[property[Instance]]['${key}'] = value;
-                        // dirty if different
-                        if (previous !== value) {
-                          const bit = ${dirtyIndex} + this[DirtyOffset];
-                          const i = bit >> 3;
-                          const j = 1 << (bit & 7);
-                          views.dirty[i] |= j;
-                          onDirtyCallback(bit, this);
+    return (blueprint.Proxy ?? ((C) => C))(
+      codegen(`
+        return class ConcreteProxy extends Proxy {
+          ${Object.entries(properties).map(([key, property]) => {
+            const props = `
+              get ['${key}']() { return this[property[Instance]]['${key}']; }
+              ${
+                property instanceof ProxyProperty
+                  ? `set ['${key}'](value) { this[property[Instance]]['${key}'][Set](value); }`
+                  : (
+                    views.dirty
+                      ? `
+                        set ['${key}'](value) {
+                          // remember
+                          const previous = this[property[Instance]]['${key}'];
+                          this[property[Instance]]['${key}'] = value;
+                          // dirty if different
+                          if (previous !== value) {
+                            const bit = ${dirtyIndex} + this[DirtyOffset];
+                            views.dirty[bit >> 3] |= 1 << (bit & 7);
+                            onDirtyCallback(bit, this);
+                          }
                         }
-                      }
-                    `
-                    : `set ['${key}'](value) { this[property[Instance]]['${key}'] = value; }`
-                )
-            }
-          `;
-          dirtyIndex += property.dirtyWidth;
-          return props;
-        }).join('\n')}
-      }
-    `))(...Object.values(bound));
-    // apply blueprint proxy
-    return (blueprint.Proxy ?? ((C) => C))(ConcreteProxy);
+                      `
+                      : `set ['${key}'](value) { this[property[Instance]]['${key}'] = value; }`
+                  )
+              }
+            `;
+            dirtyIndex += property.dirtyWidth;
+            return props;
+          }).join('\n')}
+        }
+      `, {
+        DirtyOffset,
+        Instance,
+        onDirtyCallback: 'function' === typeof views.onDirty ? views.onDirty : nop,
+        property: this,
+        Proxy,
+        Set,
+        views,
+      }),
+    );
   }
 
   generateProxy({children, isRoot, views}) {
@@ -141,15 +139,13 @@ registry.object = class extends ProxyProperty {
         let dirtyOffset = this[DirtyOffset];
         for (const key in properties) {
           const property = properties[key];
-          const i = dirtyOffset >> 3;
-          const j = 1 << (dirtyOffset & 7);
           let keyDiff;
           // recur
           if (property instanceof ProxyProperty) {
             keyDiff = this[key][Diff]();
           }
           // check dirty bit
-          else if (views.dirty[i] & j) {
+          else if (views.dirty[dirtyOffset >> 3] & (1 << (dirtyOffset & 7))) {
             keyDiff = this[key];
           }
           if (undefined !== keyDiff) {
@@ -164,51 +160,19 @@ registry.object = class extends ProxyProperty {
         let bit = this[DirtyOffset];
         for (const key in properties) {
           const property = properties[key];
-          const i = bit >> 3;
-          const j = 1 << (bit & 7);
-          views.dirty[i] &= ~j;
           if (property instanceof ProxyProperty) {
-            property[MarkClean]();
+            this[key][MarkClean]();
+          }
+          else {
+            views.dirty[bit >> 3] &= ~(1 << (bit & 7));
           }
           bit += property.dirtyWidth;
         }
       };
     }
-    ObjectProxy.prototype[Initialize] = (new Function('DirtyOffset, properties, views', `
-      return function(value) {
-        ${views.dirty ? 'let bit = this[DirtyOffset]' : ''}
-        ${
-          Object.keys(properties).map((key) => `{
-            const key = '${key}';
-            this[key] = (value && key in value) ? value[key] : properties[key].defaultValue;
-            ${
-              views.dirty
-                ? `
-                  const i = bit >> 3;
-                  const j = 1 << (bit & 7);
-                  views.dirty[i] |= j;
-                  bit += properties[key].dirtyWidth;
-                `
-                : ''
-            }
-          }`).join('\n')
-        }
-      };
-    `))(DirtyOffset, properties, views);
-    ObjectProxy.prototype[Set] = this.makePropertySetter('this', this.properties);
-    const bound = {
-      children,
-      DataOffset,
-      DirtyOffset,
-      Instance,
-      properties,
-      property: this,
-      ObjectProxy,
-      views,
-    };
     const hasProxies = Object.values(properties)
       .some((property) => property instanceof ProxyProperty);
-    const Proxy = (new Function(Object.keys(bound).join(','), `
+    return codegen(`
       const {dataWidth, dirtyWidth} = property;
       return class FixedObjectProxy extends ObjectProxy {
         constructor(dataIndex, dirtyIndex) {
@@ -238,24 +202,58 @@ registry.object = class extends ProxyProperty {
               }).join('\n')
           }
         }
-      }
-    `))(...Object.values(bound));
-    return Proxy;
-  }
-
-  makePropertySetter(destination, properties) {
-    const bound = {Instance, properties: this.properties};
-    // constant key access
-    return (new Function(Object.keys(bound).join(','), `
-      return function (v) {
-        if (!v) return;
-        ${
-          Object.keys(properties)
-            .map((key) => `if ('${key}' in v) { ${destination}['${key}'] = v['${key}']; }`)
-            .join('\n')
+        [Set](value) {
+          if (!value) return;
+          ${
+            Object.keys(properties)
+              .map((key) => `if ('${key}' in value) { this['${key}'] = value['${key}']; }`)
+              .join('\n')
+          }
         }
-      };
-    `))(...Object.values(bound));
+        [SetWithDefaults](value) {
+          if (value) {
+            ${
+              Object.keys(properties).map((key) => `
+                this['${key}'] = '${key}' in value
+                  ? value['${key}']
+                  : properties['${key}'].defaultValue;
+              `).join('\n')
+            }
+          }
+          else {
+            ${
+              Object.keys(properties).map((key) => `
+                this['${key}'] = properties['${key}'].defaultValue;
+              `).join('\n')
+            }
+          }
+          ${
+            views.dirty
+            ? `
+              let bit = this[DirtyOffset];
+              for (let i = 0; i < property.dirtyWidth; ++i) {
+                views.dirty[bit >> 3] |= 1 << (bit & 7);
+                onDirtyCallback(bit, this);
+                bit += 1;
+              }
+            `
+            : ''
+          }
+        }
+      }
+    `, {
+      children,
+      DataOffset,
+      DirtyOffset,
+      Instance,
+      onDirtyCallback: 'function' === typeof views.onDirty ? views.onDirty : nop,
+      properties,
+      property: this,
+      ObjectProxy,
+      Set,
+      SetWithDefaults,
+      views,
+    });
   }
 
   map(views = {}, isRoot = true) {
@@ -271,69 +269,93 @@ registry.object = class extends ProxyProperty {
         : property.defaultValue;
     }
     const Proxy = this.generateProxy({children, isRoot, views});
-    let dataIndex = 0;
-    let dirtyIndex = 0;
-    const bound = {
-      DataOffset,
-      DirtyOffset,
-      Instance,
-      onDirtyCallback,
-      properties,
-      property: this,
-      Proxy,
-      Set,
-      views,
-    };
-    const MappedProxy = (new Function(Object.keys(bound).join(','), `
-      return class MappedProxy extends Proxy {
-        ${Object.entries(properties).map(([key, property]) => {
-          const props = `
-            ${
-              property instanceof ProxyProperty
-              ? `get ['${key}']() { return this[property[Instance]]['${key}']; }`
-              : `
-                get ['${key}']() {
-                  return properties['${key}'].codec.decode(views.data, {
-                    byteOffset: this[DataOffset] + ${dataIndex},
-                    isLittleEndian: true,
-                  });
-                }
-              `
-            }
-            ${
-              property instanceof ProxyProperty
-                ? `set ['${key}'](value) { this[property[Instance]]['${key}'][Set](value); }`
-                : (
-                  views.dirty
-                    ? `
-                      set ['${key}'](value) {
-                        // remember
-                        const previous = this['${key}'];
-                        properties['${key}'].codec.encode(value, views.data, this[DataOffset] + ${dataIndex}, true);
-                        // dirty if different
-                        if (previous !== value) {
-                          const bit = ${dirtyIndex} + this[DirtyOffset];
-                          views.dirty[bit >> 3] |= 1 << (bit & 7);
-                          onDirtyCallback(bit, this);
-                        }
-                      }
-                    `
-                    : `
-                      set ['${key}'](value) {
-                        properties['${key}'].codec.encode(value, views.data, this[DataOffset] + ${dataIndex}, true);
-                      }
-                    `
-                )
-            }
-          `;
-          dataIndex += property.dataWidth;
-          dirtyIndex += property.dirtyWidth;
-          return props;
-        }).join('\n')}
-      }
-    `))(...Object.values(bound));
     // apply blueprint proxy
-    return (blueprint.Proxy ?? ((C) => C))(MappedProxy);
+    return (blueprint.Proxy ?? ((C) => C))(
+      codegen(`
+        return class MappedProxy extends Proxy {
+          ${
+            views.dirty
+            ? `
+              constructor(dataIndex, dirtyIndex) {
+                super(dataIndex, dirtyIndex);
+                let bit = this[DirtyOffset];
+                for (let i = 0; i < property.dirtyWidth; ++i) {
+                  views.dirty[bit >> 3] |= 1 << (bit & 7);
+                  bit += 1;
+                }
+              }
+            `
+            : ''
+          }
+          ${(() => {
+            let dataIndex = 0;
+            let dirtyIndex = 0;
+            return Object.entries(properties).map(([key, property]) => {
+              const props = `
+                ${
+                  property instanceof ProxyProperty
+                  ? `get ['${key}']() { return this[property[Instance]]['${key}']; }`
+                  : `
+                    get ['${key}']() {
+                      return properties['${key}'].codec.decode(views.data, {
+                        byteOffset: this[DataOffset] + ${dataIndex},
+                        isLittleEndian: true,
+                      });
+                    }
+                  `
+                }
+                ${
+                  property instanceof ProxyProperty
+                    ? `set ['${key}'](value) { this[property[Instance]]['${key}'][Set](value); }`
+                    : (
+                      `
+                        set ['${key}'](value) {
+                          ${
+                            views.dirty
+                            ? `const previous = this['${key}'];`
+                            : ''
+                          }
+                          properties['${key}'].codec.encode(
+                            value,
+                            views.data,
+                            this[DataOffset] + ${dataIndex},
+                            true,
+                          );
+                          ${
+                            views.dirty
+                            ? `
+                              if (previous !== value) {
+                                const bit = ${dirtyIndex} + this[DirtyOffset];
+                                views.dirty[bit >> 3] |= 1 << (bit & 7);
+                                onDirtyCallback(bit, this);
+                              }
+                            `
+                            : ''
+                          }
+                        }
+                      `
+                    )
+                }
+              `;
+              dataIndex += property.dataWidth;
+              dirtyIndex += property.dirtyWidth;
+              return props;
+            }).join('\n')
+
+          })()}
+        }
+      `, {
+        DataOffset,
+        DirtyOffset,
+        Instance,
+        onDirtyCallback,
+        properties,
+        property: this,
+        Proxy,
+        Set,
+        views,
+      }),
+    );
   }
 
 }

@@ -1,7 +1,7 @@
 import {Codecs} from 'crunches';
 
 import {Pool} from './pool.js';
-import {Diff, Initialize, MarkClean, ProxyProperty, Set as ProperteaSet, ToJSON} from './proxy.js';
+import {Diff, MarkClean, ProxyProperty, Set as ProperteaSet, SetWithDefaults, ToJSON} from './proxy.js';
 import {registry} from './register.js';
 
 const Key = Symbol('Index');
@@ -12,7 +12,9 @@ registry.array = class extends ProxyProperty {
   constructor(blueprint) {
     super(blueprint);
     if (!registry[blueprint.element.type]) {
-      throw new TypeError(`Propertea: '${blueprint.element.type}' not registered`);
+      throw new TypeError(
+        `Propertea(array): element type '${blueprint.element.type}' not registered`,
+      );
     }
     this.property = new registry[blueprint.element.type](blueprint.element);
     this.codec = new Codecs.array(blueprint);
@@ -40,8 +42,8 @@ registry.array = class extends ProxyProperty {
           },
         },
         {
-          onDirty: (bit, proxy, key, property) => {
-            views.onDirty?.(bit, proxy, key, property);
+          onDirty: (bit, proxy) => {
+            views.onDirty?.(bit, proxy);
             const index = Math.floor(bit / dirtyWidth);
             if (index < pool.length.value) {
               pool.proxies[index][ArraySymbol].dirty.add(pool.proxies[index][Key]);
@@ -123,7 +125,7 @@ registry.array = class extends ProxyProperty {
         }
       };
     }
-    ArrayProxy.prototype[Initialize] = function() {};
+    ArrayProxy.prototype[SetWithDefaults] = function() {};
     ArrayProxy.prototype[ProperteaSet] = function(iterable) {
       this.setLength(0);
       let i = 0;

@@ -2,8 +2,17 @@ import {expect, test} from 'vitest';
 
 import './object.js';
 import './primitives.js';
-import {Diff, ToJSON} from './proxy.js';
+import {Diff, MarkClean, ToJSON} from './proxy.js';
 import {Pool} from './pool.js';
+
+test('requires proxy blueprint', () => {
+  expect(() => {
+    new Pool({type: 'nope'});
+  }).toThrowError('not registered');
+  expect(() => {
+    new Pool({type: 'uint8'});
+  }).toThrowError('not a proxy type');
+});
 
 test('data', () => {
   const pool = new Pool({
@@ -34,6 +43,48 @@ test('data', () => {
   expect(array[0]).toEqual(43);
   first.x.y.a = 12;
   expect(array[1]).toEqual(12);
+});
+
+test('dirty (mapped)', () => {
+  const pool = new Pool({
+    type: 'object',
+    properties: {
+      o: {
+        type: 'object',
+        properties: {
+          x: {type: 'uint8'},
+        },
+      },
+      x: {type: 'uint8'},
+    },
+  });
+  const proxy = pool.allocate();
+  expect(proxy[Diff]()).toEqual({o: {x: 0}, x: 0});
+  proxy[MarkClean]();
+  pool.free(proxy);
+  pool.allocate();
+  expect(proxy[Diff]()).toEqual({o: {x: 0}, x: 0});
+});
+
+test('dirty (concrete)', () => {
+  const pool = new Pool({
+    type: 'object',
+    properties: {
+      o: {
+        type: 'object',
+        properties: {
+          x: {type: 'string'},
+        },
+      },
+      x: {type: 'string'},
+    },
+  });
+  const proxy = pool.allocate();
+  expect(proxy[Diff]()).toEqual({o: {x: ''}, x: ''});
+  proxy[MarkClean]();
+  pool.free(proxy);
+  pool.allocate();
+  expect(proxy[Diff]()).toEqual({o: {x: ''}, x: ''});
 });
 
 test('shapeless', () => {
@@ -149,16 +200,39 @@ test('wasm', async () => {
     samples.push(sample);
     pool.allocate({z: sample});
   }
+  pool.markClean();
   const {default: buffer} = await import('./pool.test.wat?multi_memory');
   const exports = await WebAssembly.instantiate(buffer, {pool: pool.imports()})
     .then(({instance: {exports}}) => exports);
   const parameter = Math.random();
-  pool.markClean();
-  exports.test(parameter);
+  exports.thisIsAWasmTest(parameter);
   for (let i = 0; i < 10; ++i) {
     expect(pool.proxies[i].z).toBeCloseTo(parameter + i + samples[i]);
   }
   expect(pool.proxies.values((proxy) => proxy[Diff]())).toEqual(
     pool.proxies.values((proxy) => proxy[ToJSON]())
   );
+});
+
+test('allocation reactivity', () => {
+  let dirties = 0;
+  const pool = new Pool({
+    type: 'object',
+    properties: {
+      o: {
+        type: 'object',
+        properties: {
+          x: {type: 'uint8'},
+        },
+      },
+      x: {type: 'uint8'},
+    },
+  }, {
+    onDirty: () => { dirties += 1; },
+  });
+  const proxy = pool.allocate();
+  expect(dirties).toEqual(2);
+  pool.free(proxy);
+  pool.allocate();
+  expect(dirties).toEqual(4);
 });
