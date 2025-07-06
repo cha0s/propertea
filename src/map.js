@@ -14,8 +14,7 @@ registry.map = class extends ProxyProperty {
     if (!registry[blueprint.value.type]) {
       throw new TypeError(`Propertea(map): value type '${blueprint.value.type}' not registered`);
     }
-    const property = new registry[blueprint.value.type](blueprint.value);
-    this.property = property;
+    this.property = new registry[blueprint.value.type](blueprint.value);
     this.codec = new Codecs.map(blueprint);
   }
 
@@ -59,6 +58,7 @@ registry.map = class extends ProxyProperty {
 
       constructor() {
         super();
+        this[ProperteaSet](blueprint.defaultValue);
       }
 
       clear() {
@@ -130,6 +130,9 @@ registry.map = class extends ProxyProperty {
     }
     MapProxy.prototype[SetWithDefaults] = function() {};
     MapProxy.prototype[ProperteaSet] = function(entries) {
+      if (!entries) {
+        return;
+      }
       this.clear();
       for (const entry of entries) {
         this.set(entry[0], entry[1]);

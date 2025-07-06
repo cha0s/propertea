@@ -7,6 +7,8 @@ import {registry} from './register.js';
 const Key = Symbol('Index');
 const ArraySymbol = Symbol('ArraySymbol');
 
+const nop = () => {};
+
 registry.array = class extends ProxyProperty {
 
   constructor(blueprint) {
@@ -29,6 +31,8 @@ registry.array = class extends ProxyProperty {
   generateProxy(views) {
     const {blueprint, property} = this;
     const {dirtyWidth} = property;
+    const onDirty = views.onDirty ?? true;
+    const onDirtyCallback = 'function' === typeof onDirty ? onDirty : nop;
     let Concrete;
     let pool;
     if (property instanceof ProxyProperty) {
@@ -41,15 +45,15 @@ registry.array = class extends ProxyProperty {
             [ArraySymbol] = undefined;
           },
         },
-        {
+        onDirty ? {
           onDirty: (bit, proxy) => {
-            views.onDirty?.(bit, proxy);
+            onDirtyCallback(bit, proxy);
             const index = Math.floor(bit / dirtyWidth);
             if (index < pool.length.value) {
               pool.proxies[index][ArraySymbol].dirty.add(pool.proxies[index][Key]);
             }
           },
-        },
+        } : {},
       );
     }
 
@@ -58,6 +62,7 @@ registry.array = class extends ProxyProperty {
 
       constructor() {
         super();
+        this[ProperteaSet](blueprint.defaultValue);
       }
 
       dirty = new Set();
@@ -67,13 +72,25 @@ registry.array = class extends ProxyProperty {
           if (property instanceof ProxyProperty) {
             pool.free(this[i]);
           }
-          this.dirty.add(i);
+          if (onDirty) {
+            this.dirty.add(i);
+          }
         }
         super.length = length;
       }
 
       setAt(key, value) {
-        if (property instanceof ProxyProperty) {
+        if (undefined === value) {
+          if (key in this) {
+            pool.free(this[key]);
+          }
+          if (onDirty) {
+            this.dirty.add(key);
+          }
+        }
+        const isProxy = property instanceof ProxyProperty;
+        let previous;
+        if (isProxy) {
           if (this[key]) {
             this[key][ProperteaSet](value instanceof Concrete ? value[ToJSON]() : value);
             value = this[key];
@@ -87,8 +104,18 @@ registry.array = class extends ProxyProperty {
             value = localValue;
           }
         }
-        this.dirty.add(key);
+        else {
+          previous = this[key];
+        }
+        if (onDirty) {
+          this.dirty.add(key);
+        }
         this[key] = value;
+        if (!isProxy) {
+          if (previous !== value) {
+            onDirtyCallback(parseInt(key), this);
+          }
+        }
       }
 
       [ToJSON]() {
@@ -125,12 +152,24 @@ registry.array = class extends ProxyProperty {
         }
       };
     }
-    ArrayProxy.prototype[SetWithDefaults] = function() {};
-    ArrayProxy.prototype[ProperteaSet] = function(iterable) {
-      this.setLength(0);
-      let i = 0;
-      for (const value of iterable) {
-        this.setAt(i++, value);
+    ArrayProxy.prototype[SetWithDefaults] = function(value) {
+      this[ProperteaSet](value);
+    };
+    ArrayProxy.prototype[ProperteaSet] = function(iterableOrDiff) {
+      if (!iterableOrDiff || 'object' !== typeof iterableOrDiff) {
+        return;
+      }
+      if (Symbol.iterator in iterableOrDiff) {
+        this.setLength(0);
+        let i = 0;
+        for (const value of iterableOrDiff) {
+          this.setAt(i++, value);
+        }
+      }
+      else {
+        for (const key in iterableOrDiff) {
+          this.setAt(parseInt(key), iterableOrDiff[key]);
+        }
       }
     };
     return ArrayProxy;

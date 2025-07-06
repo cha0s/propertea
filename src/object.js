@@ -1,11 +1,10 @@
 import {Codecs} from 'crunches';
 
-import {Diff, MarkClean, ProxyProperty, Set, SetWithDefaults, ToJSON, ToJSONWithoutDefaults} from './proxy.js';
+import {Diff, Instance, MarkClean, ProxyProperty, Set, SetWithDefaults, ToJSON, ToJSONWithoutDefaults} from './proxy.js';
 import {registry} from './register.js';
 
 const DataOffset = Symbol('DataOffset');
 const DirtyOffset = Symbol('DirtyOffset');
-const Instance = Symbol('Instance');
 
 const nop = () => {};
 
@@ -74,7 +73,7 @@ registry.object = class extends ProxyProperty {
                           if (previous !== value) {
                             const bit = ${dirtyIndex} + this[DirtyOffset];
                             views.dirty[bit >> 3] |= 1 << (bit & 7);
-                            onDirtyCallback(bit, this);
+                            ${isRoot ? `onDirtyCallback(bit, this);` : ''}
                           }
                         }
                       `
@@ -100,6 +99,7 @@ registry.object = class extends ProxyProperty {
 
   generateProxy({children, isRoot, views}) {
     const {properties} = this;
+    const onDirty = views.onDirty ?? true;
     // proxy API
     class ObjectProxy {
       [ToJSON]() {
@@ -133,7 +133,7 @@ registry.object = class extends ProxyProperty {
       }
     }
     // dirty API
-    if (views.onDirty ?? true) {
+    if (onDirty) {
       ObjectProxy.prototype[Diff] = function() {
         let diff;
         let dirtyOffset = this[DirtyOffset];
@@ -163,7 +163,7 @@ registry.object = class extends ProxyProperty {
           if (property instanceof ProxyProperty) {
             this[key][MarkClean]();
           }
-          else {
+          else if (views.dirty) {
             views.dirty[bit >> 3] &= ~(1 << (bit & 7));
           }
           bit += property.dirtyWidth;
@@ -201,6 +201,7 @@ registry.object = class extends ProxyProperty {
                 }`;
               }).join('\n')
           }
+          this[SetWithDefaults](property.defaultValue);
         }
         [Set](value) {
           if (!value) return;
@@ -213,18 +214,18 @@ registry.object = class extends ProxyProperty {
         [SetWithDefaults](value) {
           if (value) {
             ${
-              Object.keys(properties).map((key) => `
+              Object.keys(properties).map((key) => `{
                 this['${key}'] = '${key}' in value
                   ? value['${key}']
                   : properties['${key}'].defaultValue;
-              `).join('\n')
+              }`).join('\n')
             }
           }
           else {
             ${
-              Object.keys(properties).map((key) => `
+              Object.keys(properties).map((key) => `{
                 this['${key}'] = properties['${key}'].defaultValue;
-              `).join('\n')
+              }`).join('\n')
             }
           }
           ${
@@ -232,8 +233,10 @@ registry.object = class extends ProxyProperty {
             ? `
               let bit = this[DirtyOffset];
               for (let i = 0; i < property.dirtyWidth; ++i) {
-                views.dirty[bit >> 3] |= 1 << (bit & 7);
-                onDirtyCallback(bit, this);
+                if (0 === (views.dirty[bit >> 3] & 1 << (bit & 7))) {
+                  views.dirty[bit >> 3] |= 1 << (bit & 7);
+                  onDirtyCallback(bit, this);
+                }
                 bit += 1;
               }
             `
@@ -327,7 +330,7 @@ registry.object = class extends ProxyProperty {
                               if (previous !== value) {
                                 const bit = ${dirtyIndex} + this[DirtyOffset];
                                 views.dirty[bit >> 3] |= 1 << (bit & 7);
-                                onDirtyCallback(bit, this);
+                                ${isRoot ? `onDirtyCallback(bit, this);` : ''}
                               }
                             `
                             : ''

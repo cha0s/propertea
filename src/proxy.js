@@ -1,6 +1,7 @@
 import {Property} from './property.js';
 
 export const Diff = Symbol('Diff');
+export const Instance = Symbol('Instance');
 export const MarkClean = Symbol('MarkClean');
 export const Set = Symbol('Set');
 export const SetWithDefaults = Symbol('SetWithDefaults');

@@ -4,15 +4,15 @@
 
 A high-performance low-level state management system for games :video_game:. Contains supercharged [proxies](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy).
 
-Propertea supports:
+## :fire: Features
 
-- Change/dirty tracking ([`MarkClean`](#), [`onDirty`](#))
-- Creating and applying diffs ([`Diff`](#), [`Set`](#), [`SetWithDefaults`](#))
-- Full (de)serialization to/from JSON ([`ToJSON`](#), [`ToJSONWithoutDefaults`](#))
-- Fixed-size binary representation for efficient state transformations using `TypedArray` or WASM.
+- Change/dirty tracking
+- Creating and applying diffs
+- Full (de)serialization to/from JSON
+- Fixed-size contiguous binary representation for efficient state transformations using `TypedArray` or even WASM.
 - Object pooling
 
-## Examples
+## Examples :mag:
 
 ### Pool (fixed-size)
 
@@ -79,7 +79,7 @@ const user = userPool.allocate();
 assert(user.age === 0);
 assert(user.name === '');
 // same structure, null buffer
-assert(userPool.data.memory.buffer.byteLength === 0)
+assert(userPool.data.memory.buffer.byteLength === 0);
 ```
 
 Notice that even though `age` is a `uint32` (a fixed-size type), **the type becomes dynamic-sized if any type contained within is dynamic-sized**.
@@ -111,12 +111,13 @@ assert(another[Diff]() === undefined);
 Changes may trigger a callback:
 
 ```js
-const reactivePool = new Pool({
+const blueprint = {
   type: 'object',
   properties: {
     foo: {type: 'string'},
   },
-}, {
+};
+const params = {
   onDirty: (
     // the dirty bit
     bit,
@@ -124,14 +125,21 @@ const reactivePool = new Pool({
     proxy,
   ) => {
     // ... do something!
-    console.log('dirty!');
+    console.log('bit:', bit, 'proxy:', proxy);
   }
-});
+};
+const reactivePool = new Pool(blueprint, params);
+reactivePool.allocate();
+// bit: 0 proxy: ConcreteProxy {
+//   [Symbol(element)]: { foo: '' },
+//   [Symbol(DataOffset)]: 0,
+//   [Symbol(DirtyOffset)]: 0
+// }
 ```
 
 ### WASM
 
-Pools are structured to be operated on by WASM. See [src/pool.test.wat](./src/pool.test.wat) for a minimal example of using WASM to transform data.
+Pools are structured to be operated on by WASM. See [src/pool.test.wat](./src/pool.test.wat) for a minimal example of using WASM to transform data (and track changes).
 
 Excerpted from [src/pool.test.js](./src/pool.test.js):
 
@@ -179,15 +187,18 @@ Networked real-time applications with arbitrarily-large mutable state (read: gam
 
 ### Performance
 
+Code generation (`new Function`) is used to generate a [monomorphic](https://mrale.ph/blog/2015/01/11/whats-up-with-monomorphism.html) proxy shape from a blueprint. This keeps the [inline cache](https://mathiasbynens.be/notes/shapes-ics) hot and performant.
+
 It is greatly beneficial for performance when data is arranged contiguously so that e.g. SIMD may be leveraged for data transformations.
 
-This library is *fast*. As you can see in [`src/pool.bench.js`](./src/pool.bench.js), Propertea beats native JavaScript by 100-1000x transforming contiguous data.
+This library is *fast*. As you can see in [`src/pool.bench.js`](./src/pool.bench.js), Propertea beats native JavaScript by 100-1000x transforming contiguous data. Pooled allocations actually beat native after warming the pool.
 
-Pooled allocations actually beat native after warming the pool.
+### Onward and upward
 
-Code generation (`new Function`) is used to generate a [monomorphic](https://mrale.ph/blog/2015/01/11/whats-up-with-monomorphism.html) proxy shape, based off the blueprint.
+Specifically, this is motivated by my pure JavaScript ECS which is the next to be released.
 
-### etc...
+## TODO
 
-Specifically, this is motivated by my pure JavaScript ECS that is the next to be open sourced.
-
+- Fixed-length arrays
+- Fixed-shape maps (depends on `crunches` codec support)
+- More array proxy ops

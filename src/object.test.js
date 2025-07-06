@@ -94,7 +94,7 @@ test('mapped onDirty', () => {
   const Proxy = property.map({data, dirty, onDirty: () => { dirties += 1; }});
   expect(dirties).toEqual(0);
   const proxy = new Proxy(0);
-  expect(dirties).toEqual(2); // not 4 b/c 2 are zeroes instead of undefined
+  expect(dirties).toEqual(4);
   dirties = 0;
   proxy.x = 2;
   expect(dirties).toEqual(1);
@@ -206,4 +206,19 @@ test('set', () => {
   proxy[Set]({x: 3, y: 6});
   expect(proxy.x).toEqual(3);
   expect(proxy.y).toEqual(6);
+});
+
+test('default value', () => {
+  const property = new registry.object({
+    defaultValue: {y: 2, z: 3},
+    properties: {
+      x: {defaultValue: 1, type: 'uint8'},
+      y: {type: 'uint8'},
+      z: {defaultValue: 6, type: 'uint8'},
+      a: {type: 'uint8'},
+    },
+  });
+  const Proxy = property.concrete();
+  const proxy = new Proxy(0);
+  expect(proxy[ToJSON]()).toEqual({x: 1, y: 2, z: 3, a: 0});
 });

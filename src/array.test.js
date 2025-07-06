@@ -6,12 +6,22 @@ import './primitives.js';
 import {Diff, MarkClean, Set, ToJSON} from './proxy.js';
 import {registry} from './register.js';
 
+test('default value', () => {
+  const property = new registry.array({
+    defaultValue: [1, 2, 3],
+    element: {type: 'uint8'},
+  });
+  const Proxy = property.concrete();
+  const proxy = new Proxy();
+  expect(proxy[Diff]()).toEqual({0: 1, 1: 2, 2: 3});
+});
+
 test('primitive', () => {
   const property = new registry.array({
     element: {type: 'uint8'},
   });
-  const Map = property.concrete();
-  const proxy = new Map();
+  const Proxy = property.concrete();
+  const proxy = new Proxy();
   proxy.setAt(0, 1);
   expect(proxy[0]).toEqual(1);
   expect(proxy[Diff]()).toEqual({0: 1});
@@ -21,8 +31,8 @@ test('proxy', () => {
   const property = new registry.array({
     element: {type: 'object', properties: {x: {type: 'uint8'}}},
   });
-  const Map = property.concrete();
-  const proxy = new Map();
+  const Proxy = property.concrete();
+  const proxy = new Proxy();
   const value = {x: 4};
   proxy.setAt(0, value);
   const first = proxy[0];
@@ -50,8 +60,8 @@ test('within', () => {
       x: {type: 'array', element: {type: 'uint8'}},
     },
   });
-  const Map = property.concrete();
-  const proxy = new Map();
+  const Proxy = property.concrete();
+  const proxy = new Proxy();
   const value = [1, 2, 3];
   proxy.x = value;
   expect(proxy.x[ToJSON]()).not.toBe(value);
@@ -59,4 +69,55 @@ test('within', () => {
   proxy.x[MarkClean]();
   proxy.x.setAt(1, 3);
   expect(proxy[Diff]()).toEqual({x: {1: 3}});
+});
+
+test('set partial', () => {
+  const property = new registry.array({
+    element: {type: 'uint8'},
+  });
+  const Proxy = property.concrete();
+  const proxy = new Proxy();
+  proxy.setAt(0, 1);
+  proxy.setAt(1, 2);
+  proxy[Set]({2: 3});
+  expect(proxy[Diff]()).toEqual({0: 1, 1: 2, 2: 3});
+});
+
+test('reactivity', () => {
+  let dirties = 0;
+  const property = new registry.array({
+    element: {type: 'uint8'},
+  });
+  const Proxy = property.concrete({
+    onDirty: () => { dirties += 1; }
+  });
+  const proxy = new Proxy();
+  expect(dirties).toEqual(0);
+  proxy.setAt(0, 1);
+  expect(dirties).toEqual(1);
+  proxy.setAt(1, 2);
+  expect(dirties).toEqual(2);
+  proxy[Set]({2: 3});
+  expect(proxy[Diff]()).toEqual({0: 1, 1: 2, 2: 3});
+});
+
+test('reactivity (proxy)', () => {
+  let dirties = 0;
+  const property = new registry.array({
+    element: {
+      type: 'object',
+      properties: {
+        x: {type: 'uint8'},
+      },
+    },
+  });
+  const Proxy = property.concrete({
+    onDirty: () => { dirties += 1; }
+  });
+  const proxy = new Proxy();
+  expect(dirties).toEqual(0);
+  proxy.setAt(0, {x: 3});
+  expect(dirties).toEqual(2);
+  proxy[0].x = 4;
+  expect(dirties).toEqual(3);
 });

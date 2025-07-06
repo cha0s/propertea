@@ -1,4 +1,4 @@
-import {ProxyProperty, SetWithDefaults} from './proxy.js';
+import {Instance, MarkClean, ProxyProperty, SetWithDefaults} from './proxy.js';
 import {registry} from './register.js';
 
 export const Index = Symbol('Index');
@@ -26,7 +26,10 @@ export class Pool {
     if (!registry[blueprint.type]) {
       throw new TypeError(`Propertea(pool): blueprint type '${blueprint.type}' not registered`);
     }
-    const property = new registry[blueprint.type](blueprint);
+    class PoolProperty extends registry[blueprint.type] {
+      [Instance] = Symbol('element');
+    }
+    const property = new PoolProperty(blueprint);
     if (!(property instanceof ProxyProperty)) {
       throw new TypeError(`Propertea(pool): blueprint type '${blueprint.type}' not a proxy type`);
     }
@@ -90,6 +93,7 @@ export class Pool {
   }
 
   free(proxy) {
+    proxy[MarkClean]();
     this.freeList.push(proxy);
     this.proxies[proxy[Index]] = null;
   }
