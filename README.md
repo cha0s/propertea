@@ -2,8 +2,11 @@
 
 # Propertea :tea:
 
-A high-performance low-level state management system for games :video_game:. Contains supercharged [proxies](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy).
+A high-performance low-level state management system for games :video_game:.
 
+Code generation (`new Function`) is used to generate a [monomorphic](https://mrale.ph/blog/2015/01/11/whats-up-with-monomorphism.html),  [proxy-like](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy) shape from a blueprint. This keeps the [inline cache](https://mathiasbynens.be/notes/shapes-ics) hot and performant  while preserving the ergonomics of property access.
+
+ 
 ## :fire: Features
 
 - Change/dirty tracking
@@ -187,15 +190,13 @@ Networked real-time applications with arbitrarily-large mutable state (read: gam
 
 ### Performance
 
-Code generation (`new Function`) is used to generate a [monomorphic](https://mrale.ph/blog/2015/01/11/whats-up-with-monomorphism.html) proxy shape from a blueprint. This keeps the [inline cache](https://mathiasbynens.be/notes/shapes-ics) hot and performant.
-
 It is greatly beneficial for performance when data is arranged contiguously so that e.g. SIMD may be leveraged for data transformations.
 
 This library is *fast*. As you can see in [`src/pool.bench.js`](./src/pool.bench.js), Propertea beats native JavaScript by 100-1000x transforming contiguous data. Pooled allocations actually beat native after warming the pool.
 
 ### Onward and upward
 
-Specifically, this is motivated by my pure JavaScript ECS which is the next to be released.
+Specifically, this is motivated by my pure JavaScript ECS [ecstc](https://github.com/cha0s/ecstc) which I'm working on open sourcing.
 
 ## TODO
 
