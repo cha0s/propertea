@@ -13,6 +13,7 @@ registry.array = class extends ProxyProperty {
 
   constructor(blueprint) {
     super(blueprint);
+    /* v8 ignore next 5 */
     if (!registry[blueprint.element.type]) {
       throw new TypeError(
         `Propertea(array): element type '${blueprint.element.type}' not registered`,
@@ -62,6 +63,7 @@ registry.array = class extends ProxyProperty {
 
       constructor() {
         super();
+        this.pool = pool;
         this[ProperteaSet](blueprint.defaultValue);
       }
 
@@ -89,16 +91,18 @@ registry.array = class extends ProxyProperty {
         const isProxy = property instanceof ProxyProperty;
         let previous;
         if (isProxy) {
+          let localValue;
           if (this[key]) {
             this[key][ProperteaSet](value instanceof Concrete ? value[ToJSON]() : value);
-            value = this[key];
+            localValue = this[key];
           }
           else {
-            const localValue = pool.allocate(undefined, (proxy) => {
+            localValue = pool.allocate(value, (proxy) => {
               proxy[Key] = key;
               proxy[ArraySymbol] = this;
             });
-            localValue[ProperteaSet](value instanceof Concrete ? value[ToJSON]() : value);
+          }
+          if (undefined !== value) {
             value = localValue;
           }
         }
@@ -106,10 +110,8 @@ registry.array = class extends ProxyProperty {
           previous = this[key];
         }
         this[key] = value;
-        if (!isProxy) {
-          if (previous !== value) {
-            onDirtyCallback(parseInt(key), this);
-          }
+        if (!isProxy && previous !== value) {
+          onDirtyCallback(parseInt(key), this);
         }
       }
 

@@ -3,7 +3,7 @@ import {expect, test} from 'vitest';
 import './array.js';
 import './object.js';
 import './primitives.js';
-import {Diff, MarkClean, Set, ToJSON} from './proxy.js';
+import {Diff, MarkClean, Set, SetWithDefaults, ToJSON} from './proxy.js';
 import {registry} from './register.js';
 
 test('default value', () => {
@@ -83,6 +83,20 @@ test('set partial', () => {
   expect(proxy[Diff]()).toEqual({0: 1, 1: 2, 2: 3});
 });
 
+test('set with defaults', () => {
+  let dirties = 0;
+  const property = new registry.array({
+    element: {type: 'uint8'},
+  });
+  const Proxy = property.concrete({
+    onDirty: () => { dirties += 1; }
+  });
+  const proxy = new Proxy();
+  proxy[SetWithDefaults]([1, 2, 3]);
+  expect(dirties).toEqual(3);
+  expect(proxy[Diff]()).toEqual({0: 1, 1: 2, 2: 3});
+});
+
 test('reactivity', () => {
   let dirties = 0;
   const property = new registry.array({
@@ -118,6 +132,60 @@ test('reactivity (proxy)', () => {
   expect(dirties).toEqual(0);
   proxy.setAt(0, {x: 3});
   expect(dirties).toEqual(2);
-  proxy[0].x = 4;
-  expect(dirties).toEqual(3);
+  proxy.setAt(1, {x: 4});
+  expect(dirties).toEqual(4);
+  proxy[0].x = 5;
+  expect(dirties).toEqual(5);
+  proxy.setAt(1, proxy[0]);
+  expect(dirties).toEqual(6);
+});
+
+test('disabled diff (proxy)', () => {
+  const property = new registry.array({
+    element: {
+      type: 'object',
+      properties: {
+        x: {type: 'uint8'},
+      },
+    },
+  });
+  const Proxy = property.concrete({onDirty: false});
+  const proxy = new Proxy();
+  proxy.setAt(0, {x: 1});
+  expect(proxy.dirty.size).toEqual(0);
+  expect(proxy[Diff]).toBeUndefined();
+});
+
+test('remove element', () => {
+  const property = new registry.array({
+    element: {type: 'uint8'},
+  });
+  const Proxy = property.concrete();
+  const proxy = new Proxy();
+  proxy.setAt(0, 1);
+  proxy.setAt(1, 2);
+  proxy.setAt(1, undefined);
+  expect(proxy[Diff]()).toEqual({0: 1, 1: undefined});
+});
+
+test('remove element (proxy)', () => {
+  const property = new registry.array({
+    element: {
+      type: 'object',
+      properties: {
+        x: {type: 'uint8'},
+      },
+    },
+  });
+  const Proxy = property.concrete();
+  const proxy = new Proxy();
+  proxy.setAt(0, {x: 1});
+  proxy.setAt(1, {x: 2});
+  expect(proxy.pool.freeList.length).toEqual(0);
+  proxy.setAt(1, undefined);
+  expect(proxy.pool.freeList.length).toEqual(1);
+  expect(proxy[Diff]()).toEqual({0: {x: 1}, 1: undefined});
+  proxy.setAt(1, {x: 3});
+  expect(proxy.pool.freeList.length).toEqual(0);
+  expect(proxy[Diff]()).toEqual({0: {x: 1}, 1: {x: 3}});
 });
