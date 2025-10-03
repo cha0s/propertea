@@ -49,7 +49,7 @@ registry.array = class extends ProxyProperty {
           onDirty: (bit, proxy) => {
             onDirtyCallback(bit, proxy);
             const index = Math.floor(bit / dirtyWidth);
-            if (index < pool.length.value) {
+            if (index < pool.length.value && pool.proxies[index]) {
               pool.proxies[index][ArraySymbol].dirty.add(pool.proxies[index][Key]);
             }
           },
@@ -80,13 +80,11 @@ registry.array = class extends ProxyProperty {
       }
 
       setAt(key, value) {
-        if (undefined === value) {
-          if (key in this) {
-            pool.free(this[key]);
-          }
-          if (onDirty) {
-            this.dirty.add(key);
-          }
+        if (undefined === value && property instanceof ProxyProperty && key in this) {
+          pool.free(this[key]);
+        }
+        if (onDirty) {
+          this.dirty.add(key);
         }
         const isProxy = property instanceof ProxyProperty;
         let previous;
@@ -106,9 +104,6 @@ registry.array = class extends ProxyProperty {
         }
         else {
           previous = this[key];
-        }
-        if (onDirty) {
-          this.dirty.add(key);
         }
         this[key] = value;
         if (!isProxy) {
