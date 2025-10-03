@@ -28,7 +28,7 @@
   "scripts": {
     "build": "vite build",
     "examples": "vite examples --host $(hostname -I)",
-    "ci": "act -W .github/workflows/ci.yml",
+    "ci": "act -W .github/workflows/test.yml",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "test": "vitest --passWithNoTests src"
   },
