@@ -1,8 +1,8 @@
-import {expect, test} from 'vitest';
+import { expect, test } from 'vitest';
 
 import './object.js';
 import './primitives.js';
-import {registry} from './register.js';
+import { registry } from './register.js';
 
 test('bool', () => {
   expect(new registry.bool().defaultValue).toEqual(false);

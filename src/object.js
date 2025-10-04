@@ -1,7 +1,7 @@
-import {Codecs} from 'crunches';
+import { Codecs } from 'crunches';
 
-import {Diff, Instance, MarkClean, ProxyProperty, Set, SetWithDefaults, ToJSON, ToJSONWithoutDefaults} from './proxy.js';
-import {registry} from './register.js';
+import { Diff, Instance, MarkClean, ProxyProperty, Set, SetWithDefaults, ToJSON, ToJSONWithoutDefaults } from './proxy.js';
+import { registry } from './register.js';
 
 const DataOffset = Symbol('DataOffset');
 const DirtyOffset = Symbol('DirtyOffset');

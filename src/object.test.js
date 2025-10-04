@@ -1,9 +1,9 @@
-import {expect, test} from 'vitest';
+import { expect, test } from 'vitest';
 
 import './object.js';
 import './primitives.js';
-import {Diff, Set, SetWithDefaults, ToJSON, ToJSONWithoutDefaults} from './proxy.js';
-import {registry} from './register.js';
+import { Diff, Set, SetWithDefaults, ToJSON, ToJSONWithoutDefaults } from './proxy.js';
+import { registry } from './register.js';
 
 test('concrete', () => {
   const property = new registry.object({properties: {x: {type: 'uint8'}}});

@@ -1,7 +1,7 @@
-import {Codecs} from 'crunches';
+import { Codecs } from 'crunches';
 
-import {Property} from './property.js';
-import {registry} from './register.js';
+import { Property } from './property.js';
+import { registry } from './register.js';
 
 // boolean
 registry.bool = class extends Property {

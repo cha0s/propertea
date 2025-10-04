@@ -1,10 +1,10 @@
-import {expect, test} from 'vitest';
+import { expect, test } from 'vitest';
 
 import './map.js';
 import './object.js';
 import './primitives.js';
-import {Diff, MarkClean, ToJSON} from './proxy.js';
-import {registry} from './register.js';
+import { Diff, MarkClean, ToJSON } from './proxy.js';
+import { registry } from './register.js';
 
 test('primitive', () => {
   const property = new registry.map({

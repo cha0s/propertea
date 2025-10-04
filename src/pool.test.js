@@ -1,9 +1,9 @@
-import {expect, test} from 'vitest';
+import { expect, test } from 'vitest';
 
 import './object.js';
 import './primitives.js';
-import {Diff, MarkClean, ToJSON} from './proxy.js';
-import {Pool} from './pool.js';
+import { Diff, MarkClean, ToJSON } from './proxy.js';
+import { Pool } from './pool.js';
 
 test('requires proxy blueprint', () => {
   expect(() => {

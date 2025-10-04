@@ -1,5 +1,5 @@
 import '../src/object.js';
-import {Pool} from '../src/pool.js';
+import { Pool } from '../src/pool.js';
 import '../src/primitives.js';
 
 import buffer from './pool.test.wat?multi_memory'

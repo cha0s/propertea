@@ -1,4 +1,4 @@
-import {Property} from './property.js';
+import { Property } from './property.js';
 
 export const Diff = Symbol('Diff');
 export const Instance = Symbol('Instance');

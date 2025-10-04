@@ -22,7 +22,7 @@ Code generation (`new Function`) is used to generate a [monomorphic](https://mra
 Given a blueprint schema for a 2D position with x and y coordinates, let's create a pool of positions and allocate a couple:
 
 ```js
-import {Pool} from 'propertea';
+import { Pool } from 'propertea';
 // create
 const positionPool = new Pool({
   type: 'object',
@@ -92,7 +92,7 @@ Notice that even though `age` is a `uint32` (a fixed-size type), **the type beco
 By default, changes are tracked. Let's continue with our position pool from above:
 
 ```js
-import {Diff} from 'propertea';
+import { Diff } from 'propertea';
 
 const another = positionPool.allocate();
 console.log(another[Diff]());
@@ -104,7 +104,7 @@ Why is there already a diff? **Proxies are created dirty**. Think about a world 
 A proxy may be marked clean:
 
 ```js
-import {MarkClean} from 'propertea';
+import { MarkClean } from 'propertea';
 another[MarkClean]();
 assert(another[Diff]() === undefined);
 ```
@@ -179,7 +179,7 @@ exports.thisIsAWasmTest(parameter);
 The proxy can be serialized to JSON:
 
 ```js
-import {ToJSON} from 'propertea';
+import { ToJSON } from 'propertea';
 console.log(another[ToJSON]());
 // {x: 0, y: 0}
 ```

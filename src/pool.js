@@ -1,32 +1,101 @@
-import {Instance, MarkClean, ProxyProperty, SetWithDefaults} from './proxy.js';
-import {registry} from './register.js';
+import { Instance, MarkClean, ProxyProperty, SetWithDefaults } from './proxy.js';
+import { registry } from './register.js';
 
 export const Index = Symbol('Index');
 
+/**
+ * A class representing a pool of instances.
+ */
 export class Pool {
 
+  /**
+   * The data memory.
+   *
+   * @type {memory: WebAssembly.Memory, nextGrow: Number}
+   */
   data = {
     memory: new WebAssembly.Memory({initial: 0}),
+    /**
+     * The next grow size of the memory.
+     */
     nextGrow: 0,
   };
+
+  /**
+   * The dirty memory.
+   *
+   * @type {memory: WebAssembly.Memory, nextGrow: Number}
+   */
   dirty = {
     memory: new WebAssembly.Memory({initial: 0}),
+    /**
+     * The next grow size of the memory.
+     */
     nextGrow: 0,
   };
+
+  /**
+   * A list of free instances in the pool.
+   *
+   * @type {Array<ProxyProperty>}
+   */
   freeList = [];
+
+  /**
+   * The current length of the pool.
+   *
+   * @type {WebAssembly.Global}
+   */
   length = new WebAssembly.Global({mutable: true, value: 'i32'}, 0);
+
+  /**
+   * A list of proxies for the instances in the pool.
+   *
+   * @type {Array<ProxyProperty>}
+   */
   proxies = [];
+
+  /**
+   * The views for the data and dirty memory.
+   *
+   * @type {Object}
+   */
   views = {
+    /**
+     * The view for the data memory.
+     *
+     * @type {DataView}
+     */
     data: new DataView(new ArrayBuffer(0)),
+    /**
+     * The view for the dirty memory, or null if not used.
+     *
+     * @type {(Uint8Array|null)}
+     */
     dirty: null,
   };
 
+  /**
+   * Constructs a new pool instance.
+   *
+   * @param {Object} blueprint - The crunches blueprint for the instances in the pool.
+   * @param {Object} [params={}] - Additional parameters for the pool.
+   */
   constructor(blueprint, params = {}) {
     this.blueprint = blueprint;
     if (!registry[blueprint.type]) {
       throw new TypeError(`Propertea(pool): blueprint type '${blueprint.type}' not registered`);
     }
+
+    /**
+     * A class representing a property of an instance in the pool.
+     */
     class PoolProperty extends registry[blueprint.type] {
+      /**
+       * The instance symbol for the element.
+       *
+       * @type {Symbol}
+       */
       [Instance] = Symbol('element');
     }
     const property = new PoolProperty(blueprint);
@@ -38,16 +107,32 @@ export class Pool {
       this.views.dirty = new Uint8Array(0);
       this.views.onDirty = onDirty;
     }
-    // mapped or concrete instance based on data width
+
+    /**
+     * A class representing a proxy for an instance in the pool.
+     */
     this.Proxy = class extends property[property.dataWidth > 0 ? 'map' : 'concrete'](this.views) {
+      /**
+       * Constructs a new proxy instance.
+       *
+       * @param {number} index - The index of the instance.
+       */
       constructor(index) {
         super(index);
         this[Index] = index;
       }
     };
+
     this.property = property;
   }
 
+  /**
+   * Allocates a new instance in the pool.
+   *
+   * @param {*} value - The initial value for the instance.
+   * @param {Function} [initialize=null] - An optional function to initialize the instance.
+   * @returns {ProxyProperty} The allocated proxy instance.
+   */
   allocate(value, initialize) {
     let proxy;
     // free instance? use it
@@ -80,6 +165,11 @@ export class Pool {
     return proxy;
   }
 
+  /**
+   * Returns the imports for the pool.
+   *
+   * @returns {Object} The imports object.
+   */
   imports() {
     return {
       data: this.data.memory,
@@ -88,10 +178,18 @@ export class Pool {
     }
   }
 
+  /**
+   * Marks all instances in the pool as clean.
+   */
   markClean() {
     new Uint8Array(this.dirty.memory.buffer).fill(0);
   }
 
+  /**
+   * Frees a proxy instance from the pool.
+   *
+   * @param {ProxyProperty} proxy - The proxy instance to free.
+   */
   free(proxy) {
     proxy[MarkClean]();
     this.freeList.push(proxy);

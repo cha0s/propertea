@@ -1,6 +1,6 @@
-import {resolve} from 'node:path';
-import {defineConfig} from 'vite';
-import {coverageConfigDefaults} from 'vitest/config';
+import { resolve } from 'node:path';
+import { defineConfig } from 'vite';
+import { coverageConfigDefaults } from 'vitest/config';
 
 import ViteWabt from 'vite-plugin-wabt';
 import wabt from 'wabt';

@@ -1,10 +1,10 @@
-import {expect, test} from 'vitest';
+import { expect, test } from 'vitest';
 
 import './array.js';
 import './object.js';
 import './primitives.js';
-import {Diff, MarkClean, Set, SetWithDefaults, ToJSON} from './proxy.js';
-import {registry} from './register.js';
+import { Diff, MarkClean, Set, SetWithDefaults, ToJSON } from './proxy.js';
+import { registry } from './register.js';
 
 test('default value', () => {
   const property = new registry.array({
