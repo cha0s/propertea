@@ -44,15 +44,6 @@ export default defineConfig({
           name: 'test',
         },
       },
-      {
-        extends: './vite.config.js',
-        test: {
-          include: [
-            'src/**/*.bench.js',
-          ],
-          name: 'bench',
-        },
-      },
     ],
   },
 });
