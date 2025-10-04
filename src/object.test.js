@@ -2,7 +2,7 @@ import {expect, test} from 'vitest';
 
 import './object.js';
 import './primitives.js';
-import {Diff, Set, ToJSON, ToJSONWithoutDefaults} from './proxy.js';
+import {Diff, Set, SetWithDefaults, ToJSON, ToJSONWithoutDefaults} from './proxy.js';
 import {registry} from './register.js';
 
 test('concrete', () => {
@@ -94,6 +94,7 @@ test('mapped onDirty', () => {
   const Proxy = property.map({data, dirty, onDirty: () => { dirties += 1; }});
   expect(dirties).toEqual(0);
   const proxy = new Proxy(0);
+  proxy[SetWithDefaults]();
   expect(dirties).toEqual(4);
   dirties = 0;
   proxy.x = 2;
@@ -220,5 +221,6 @@ test('default value', () => {
   });
   const Proxy = property.concrete();
   const proxy = new Proxy(0);
+  proxy[SetWithDefaults]();
   expect(proxy[ToJSON]()).toEqual({x: 1, y: 2, z: 3, a: 0});
 });

@@ -201,7 +201,6 @@ registry.object = class extends ProxyProperty {
                 }`;
               }).join('\n')
           }
-          this[SetWithDefaults](property.defaultValue);
         }
         [Set](value) {
           if (!value) return;
@@ -215,16 +214,39 @@ registry.object = class extends ProxyProperty {
           if (value) {
             ${
               Object.keys(properties).map((key) => `{
-                this['${key}'] = '${key}' in value
-                  ? value['${key}']
-                  : properties['${key}'].defaultValue;
+                let localValue;
+                if ('${key}' in value) {
+                  localValue = value['${key}'];
+                }
+                else if (property.defaultValue && '${key}' in property.defaultValue) {
+                  localValue = property.defaultValue['${key}'];
+                }
+                else {
+                  localValue = properties['${key}'].defaultValue;
+                }
+                ${
+                  properties[key] instanceof ProxyProperty
+                    ? `this['${key}'][SetWithDefaults](localValue);`
+                    : `this['${key}'] = localValue;`
+                }
               }`).join('\n')
             }
           }
           else {
             ${
               Object.keys(properties).map((key) => `{
-                this['${key}'] = properties['${key}'].defaultValue;
+                let localValue;
+                if (property.defaultValue && '${key}' in property.defaultValue) {
+                  localValue = property.defaultValue['${key}'];
+                }
+                else {
+                  localValue = properties['${key}'].defaultValue;
+                }
+                ${
+                  properties[key] instanceof ProxyProperty
+                    ? `this['${key}'][SetWithDefaults](localValue);`
+                    : `this['${key}'] = localValue;`
+                }
               }`).join('\n')
             }
           }
@@ -276,20 +298,6 @@ registry.object = class extends ProxyProperty {
     return (blueprint.Proxy ?? ((C) => C))(
       codegen(`
         return class MappedProxy extends Proxy {
-          ${
-            views.dirty
-            ? `
-              constructor(dataIndex, dirtyIndex) {
-                super(dataIndex, dirtyIndex);
-                let bit = this[DirtyOffset];
-                for (let i = 0; i < property.dirtyWidth; ++i) {
-                  views.dirty[bit >> 3] |= 1 << (bit & 7);
-                  bit += 1;
-                }
-              }
-            `
-            : ''
-          }
           ${(() => {
             let dataIndex = 0;
             let dirtyIndex = 0;

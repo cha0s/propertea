@@ -131,13 +131,13 @@ test('reactivity (proxy)', () => {
   const proxy = new Proxy();
   expect(dirties).toEqual(0);
   proxy.setAt(0, {x: 3});
-  expect(dirties).toEqual(2);
+  expect(dirties).toEqual(1);
   proxy.setAt(1, {x: 4});
-  expect(dirties).toEqual(4);
+  expect(dirties).toEqual(2);
   proxy[0].x = 5;
-  expect(dirties).toEqual(5);
+  expect(dirties).toEqual(3);
   proxy.setAt(1, proxy[0]);
-  expect(dirties).toEqual(6);
+  expect(dirties).toEqual(4);
 });
 
 test('disabled diff (proxy)', () => {
