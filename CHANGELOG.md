@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.3](https://github.com/cha0s/propertea/compare/propertea-v1.0.2...propertea-v1.0.3) (2025-10-04)
+
+
+### Bug Fixes
+
+* freeing array proxies ([586ab82](https://github.com/cha0s/propertea/commit/586ab82291216b8c14d774a51981898a5095b681))
+* remove dirty tracking redundancy ([6c30811](https://github.com/cha0s/propertea/commit/6c308119d66a861a20f9f61f6cdae47eefee5fbf)), closes [#4](https://github.com/cha0s/propertea/issues/4)
+
 ## [1.0.2](https://github.com/cha0s/propertea/compare/propertea-v1.0.1...propertea-v1.0.2) (2025-07-06)
 
 
