@@ -10,7 +10,7 @@ export default defineConfig({
     lib: {
       entry: resolve(__dirname, 'src/index.js'),
       fileName: 'index',
-      name: 'ecstc',
+      name: 'propertea',
     },
     rollupOptions: {
       external: ['crunches'],
@@ -42,6 +42,15 @@ export default defineConfig({
             'src/**/*.test.js',
           ],
           name: 'test',
+        },
+      },
+      {
+        extends: './vite.config.js',
+        test: {
+          include: [
+            'src/**/*.bench.js',
+          ],
+          name: 'bench',
         },
       },
     ],
