@@ -34,30 +34,30 @@ registry.array = class ArrayProxyProperty extends ProxyProperty {
   /**
    * Generates a concrete proxy class for the array property.
    *
-   * @param {Object} [views={}] - An optional object containing views to be applied to the generated proxy class.
+   * @param {Object} [configuration={}] - An optional object containing configuration to be applied to the generated proxy class.
    * @returns {Class} The generated concrete proxy class.
    */
-  concrete(views = {}) {
+  concrete(configuration = {}) {
     const {blueprint} = this;
-    const Proxy = this.generateProxy(views);
+    const Proxy = this.generateProxy(configuration);
     return (blueprint.Proxy ?? ((C) => C))(Proxy);
   }
 
   /**
-   * Generates a proxy class for the array property based on the provided views.
+   * Generates a proxy class for the array property based on the provided configuration.
    *
-   * @param {Object} views - An object containing views to be applied to the generated proxy class.
+   * @param {Object} configuration - An object containing configuration to be applied to the generated proxy class.
    * @returns {Class} The generated proxy class.
    */
-  generateProxy(views) {
+  generateProxy(configuration) {
     const {blueprint, property} = this;
     const {dirtyWidth} = property;
-    const onDirty = views.onDirty ?? true;
+    const onDirty = configuration.onDirty ?? true;
     const onDirtyCallback = 'function' === typeof onDirty ? onDirty : nop;
     let Concrete;
     let pool;
     if (property instanceof ProxyProperty) {
-      Concrete = property.concrete(views);
+      Concrete = property.concrete(configuration);
       pool = new Pool(
         {
           ...blueprint.element,
@@ -85,8 +85,6 @@ registry.array = class ArrayProxyProperty extends ProxyProperty {
 
       /**
        * Constructor for the ArrayProxy class.
-       *
-       * @param {Object} [views={}] - An optional object containing views to be applied to the generated proxy class.
        */
       constructor() {
         super();
@@ -173,7 +171,7 @@ registry.array = class ArrayProxyProperty extends ProxyProperty {
     /**
      * If the onDirty view is enabled, adds dirty API functionality to the array proxy class.
      */
-    if (views.onDirty ?? true) {
+    if (configuration.onDirty ?? true) {
 
       /**
        * Calculates and returns the differences since the last clean operation.
@@ -247,11 +245,11 @@ registry.array = class ArrayProxyProperty extends ProxyProperty {
   /**
    * Returns the mapped ArrayProxy class.
    *
-   * @param {Object} [views={}] - An optional object containing views to be applied to the generated proxy class.
+   * @param {Object} [configuration={}] - An optional object containing configuration to be applied to the generated proxy class.
    * @returns {Class} The mapped ArrayProxy class.
    */
-  map(views = {}) {
-    return this.concrete(views);
+  map(configuration = {}) {
+    return this.concrete(configuration);
   }
 
 }

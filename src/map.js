@@ -27,30 +27,30 @@ registry.map = class MapProxyProperty extends ProxyProperty {
   }
 
   /**
-   * Creates a concrete map proxy class based on the provided views.
+   * Creates a concrete map proxy class based on the provided configuration.
    *
-   * @param views Optional object containing view-specific configuration values.
+   * @param configuration Optional object containing view-specific configuration values.
    * @returns The concrete map proxy class.
    */
-  concrete(views = {}) {
+  concrete(configuration = {}) {
     const {blueprint} = this;
-    const Proxy = this.generateProxy(views);
+    const Proxy = this.generateProxy(configuration);
     return (blueprint.Proxy ?? ((C) => C))(Proxy);
   }
 
   /**
-   * Generates a map proxy class based on the provided views.
+   * Generates a map proxy class based on the provided configuration.
    *
-   * @param views Optional object containing view-specific configuration values.
+   * @param configuration Optional object containing view-specific configuration values.
    * @returns The generated map proxy class.
    */
-  generateProxy(views) {
+  generateProxy(configuration) {
     const {blueprint, property} = this;
     const {dirtyWidth} = property;
     let Concrete;
     let pool;
     if (property instanceof ProxyProperty) {
-      Concrete = property.concrete(views);
+      Concrete = property.concrete(configuration);
       pool = new Pool(
         {
           ...blueprint.value,
@@ -61,7 +61,7 @@ registry.map = class MapProxyProperty extends ProxyProperty {
         },
         {
           onDirty: (bit, proxy) => {
-            views.onDirty?.(bit, proxy);
+            configuration.onDirty?.(bit, proxy);
             const index = Math.floor(bit / dirtyWidth);
             if (index < pool.length.value) {
               pool.proxies[index][MapSymbol].dirty.add(pool.proxies[index][Key]);
@@ -158,7 +158,7 @@ registry.map = class MapProxyProperty extends ProxyProperty {
     /**
      * If the onDirty view is enabled, adds dirty API functionality to the map proxy class.
      */
-    if (views.onDirty ?? true) {
+    if (configuration.onDirty ?? true) {
       /**
        * Calculates and returns the differences since the last clean operation.
        *
@@ -220,12 +220,12 @@ registry.map = class MapProxyProperty extends ProxyProperty {
   }
 
   /**
-   * Creates a concrete map proxy class based on the provided views.
+   * Creates a concrete map proxy class based on the provided configuration.
    *
-   * @param views Optional object containing view-specific configuration values.
+   * @param configuration Optional object containing view-specific configuration values.
    * @returns The concrete map proxy class.
    */
-  map(views = {}) {
-    return this.concrete(views);
+  map(configuration = {}) {
+    return this.concrete(configuration);
   }
 };

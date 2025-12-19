@@ -41,17 +41,17 @@ registry.object = class extends ProxyProperty {
     this.properties = properties;
   }
 
-  concrete(views = {}, isRoot = true) {
+  concrete(configuration = {}, isRoot = true) {
     const {blueprint, properties} = this;
     // compute children
     const children = {};
     for (const key in properties) {
       const property = properties[key];
       children[key] = property instanceof ProxyProperty
-        ? property.concrete(views, false)
+        ? property.concrete(configuration, false)
         : property.defaultValue;
     }
-    const Proxy = this.generateProxy({children, isRoot, views});
+    const Proxy = this.generateProxy({children, configuration, isRoot});
     let dirtyIndex = 0;
     return (blueprint.Proxy ?? ((C) => C))(
       codegen(`
@@ -63,7 +63,7 @@ registry.object = class extends ProxyProperty {
                 property instanceof ProxyProperty
                   ? `set ['${key}'](value) { this[property[Instance]]['${key}'][Set](value); }`
                   : (
-                    views.dirty
+                    configuration.dirty
                       ? `
                         set ['${key}'](value) {
                           // remember
@@ -72,7 +72,7 @@ registry.object = class extends ProxyProperty {
                           // dirty if different
                           if (previous !== value) {
                             const bit = ${dirtyIndex} + this[DirtyOffset];
-                            views.dirty[bit >> 3] |= 1 << (bit & 7);
+                            configuration.dirty[bit >> 3] |= 1 << (bit & 7);
                             ${isRoot ? `onDirtyCallback(bit, this);` : ''}
                           }
                         }
@@ -86,20 +86,20 @@ registry.object = class extends ProxyProperty {
           }).join('\n')}
         }
       `, {
+        configuration,
         DirtyOffset,
         Instance,
-        onDirtyCallback: 'function' === typeof views.onDirty ? views.onDirty : nop,
+        onDirtyCallback: 'function' === typeof configuration.onDirty ? configuration.onDirty : nop,
         property: this,
         Proxy,
         Set,
-        views,
       }),
     );
   }
 
-  generateProxy({children, isRoot, views}) {
+  generateProxy({children, configuration, isRoot}) {
     const {properties} = this;
-    const onDirty = views.onDirty ?? true;
+    const onDirty = configuration.onDirty ?? true;
     // proxy API
     class ObjectProxy {
       [ToJSON]() {
@@ -145,7 +145,7 @@ registry.object = class extends ProxyProperty {
             keyDiff = this[key][Diff]();
           }
           // check dirty bit
-          else if (views.dirty[dirtyOffset >> 3] & (1 << (dirtyOffset & 7))) {
+          else if (configuration.dirty[dirtyOffset >> 3] & (1 << (dirtyOffset & 7))) {
             keyDiff = this[key];
           }
           if (undefined !== keyDiff) {
@@ -163,8 +163,8 @@ registry.object = class extends ProxyProperty {
           if (property instanceof ProxyProperty) {
             this[key][MarkClean]();
           }
-          else if (views.dirty) {
-            views.dirty[bit >> 3] &= ~(1 << (bit & 7));
+          else if (configuration.dirty) {
+            configuration.dirty[bit >> 3] &= ~(1 << (bit & 7));
           }
           bit += property.dirtyWidth;
         }
@@ -180,10 +180,10 @@ registry.object = class extends ProxyProperty {
           this[property[Instance]] = {
             ${Object.keys(properties).map((key) => `'${key}': undefined`).join(',')}
           };
-          let dataOffset = ${views.data ? (isRoot ? 'dataIndex * dataWidth' : 'dataIndex') : 0};
-          let dirtyOffset = ${views.dirty ? (isRoot ? 'dataIndex * dirtyWidth' : 'dirtyIndex') : 0};
-          ${views.data ? 'this[DataOffset] = dataOffset;' : ''}
-          ${views.dirty ? 'this[DirtyOffset] = dirtyOffset;' : ''}
+          let dataOffset = ${configuration.data ? (isRoot ? 'dataIndex * dataWidth' : 'dataIndex') : 0};
+          let dirtyOffset = ${configuration.dirty ? (isRoot ? 'dataIndex * dirtyWidth' : 'dirtyIndex') : 0};
+          ${configuration.data ? 'this[DataOffset] = dataOffset;' : ''}
+          ${configuration.dirty ? 'this[DirtyOffset] = dirtyOffset;' : ''}
           ${
             // constant key access
             Object.keys(children)
@@ -196,8 +196,8 @@ registry.object = class extends ProxyProperty {
                     isProxy ? `new children[key](dataOffset, dirtyOffset)` : `children[key]`
                   };
                   ${''/* increment offsets */}
-                  ${(hasProxies && views.data) ? `dataOffset += properties[key].dataWidth;` : ''}
-                  ${(hasProxies && views.dirty) ? `dirtyOffset += properties[key].dirtyWidth;` : ''}
+                  ${(hasProxies && configuration.data) ? `dataOffset += properties[key].dataWidth;` : ''}
+                  ${(hasProxies && configuration.dirty) ? `dirtyOffset += properties[key].dirtyWidth;` : ''}
                 }`;
               }).join('\n')
           }
@@ -251,12 +251,12 @@ registry.object = class extends ProxyProperty {
             }
           }
           ${
-            views.dirty
+            configuration.dirty
             ? `
               let bit = this[DirtyOffset];
               for (let i = 0; i < property.dirtyWidth; ++i) {
-                if (0 === (views.dirty[bit >> 3] & 1 << (bit & 7))) {
-                  views.dirty[bit >> 3] |= 1 << (bit & 7);
+                if (0 === (configuration.dirty[bit >> 3] & 1 << (bit & 7))) {
+                  configuration.dirty[bit >> 3] |= 1 << (bit & 7);
                   onDirtyCallback(bit, this);
                 }
                 bit += 1;
@@ -268,32 +268,32 @@ registry.object = class extends ProxyProperty {
       }
     `, {
       children,
+      configuration,
       DataOffset,
       DirtyOffset,
       Instance,
-      onDirtyCallback: 'function' === typeof views.onDirty ? views.onDirty : nop,
+      onDirtyCallback: 'function' === typeof configuration.onDirty ? configuration.onDirty : nop,
       properties,
       property: this,
       ObjectProxy,
       Set,
       SetWithDefaults,
-      views,
     });
   }
 
-  map(views = {}, isRoot = true) {
+  map(configuration = {}, isRoot = true) {
     const {blueprint, properties} = this;
-    const onDirty = views.onDirty ?? true;
+    const onDirty = configuration.onDirty ?? true;
     const onDirtyCallback = 'function' === typeof onDirty ? onDirty : nop;
     const children = {};
     // compute children
     for (const key in properties) {
       const property = properties[key];
       children[key] = property instanceof ProxyProperty
-        ? property.map(views, false)
+        ? property.map(configuration, false)
         : property.defaultValue;
     }
-    const Proxy = this.generateProxy({children, isRoot, views});
+    const Proxy = this.generateProxy({children, configuration, isRoot});
     // apply blueprint proxy
     return (blueprint.Proxy ?? ((C) => C))(
       codegen(`
@@ -308,7 +308,7 @@ registry.object = class extends ProxyProperty {
                   ? `get ['${key}']() { return this[property[Instance]]['${key}']; }`
                   : `
                     get ['${key}']() {
-                      return properties['${key}'].codec.decode(views.data, {
+                      return properties['${key}'].codec.decode(configuration.data, {
                         byteOffset: this[DataOffset] + ${dataIndex},
                         isLittleEndian: true,
                       });
@@ -322,22 +322,22 @@ registry.object = class extends ProxyProperty {
                       `
                         set ['${key}'](value) {
                           ${
-                            views.dirty
+                            configuration.dirty
                             ? `const previous = this['${key}'];`
                             : ''
                           }
                           properties['${key}'].codec.encode(
                             value,
-                            views.data,
+                            configuration.data,
                             this[DataOffset] + ${dataIndex},
                             true,
                           );
                           ${
-                            views.dirty
+                            configuration.dirty
                             ? `
                               if (previous !== value) {
                                 const bit = ${dirtyIndex} + this[DirtyOffset];
-                                views.dirty[bit >> 3] |= 1 << (bit & 7);
+                                configuration.dirty[bit >> 3] |= 1 << (bit & 7);
                                 ${isRoot ? `onDirtyCallback(bit, this);` : ''}
                               }
                             `
@@ -356,6 +356,7 @@ registry.object = class extends ProxyProperty {
           })()}
         }
       `, {
+        configuration,
         DataOffset,
         DirtyOffset,
         Instance,
@@ -364,7 +365,6 @@ registry.object = class extends ProxyProperty {
         property: this,
         Proxy,
         Set,
-        views,
       }),
     );
   }
