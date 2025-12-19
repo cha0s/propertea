@@ -1,4 +1,4 @@
-![CI](https://github.com/cha0s/propertea/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/cha0s/propertea/actions/workflows/test.yml/badge.svg)
 
 # Propertea :tea:
 
