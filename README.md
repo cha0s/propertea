@@ -192,7 +192,7 @@ Networked real-time applications with arbitrarily-large mutable state (read: gam
 
 It is greatly beneficial for performance when data is arranged contiguously so that e.g. SIMD may be leveraged for data transformations.
 
-This library is *fast*. As you can see in [`src/pool.bench.js`](./src/pool.bench.js), Propertea beats native JavaScript by 100-1000x transforming contiguous data. Pooled allocations actually beat native after warming the pool.
+This library is *fast*. As you can see in [`src/pool.bench.js`](./src/pool.bench.js) (run with `npm test -- --run --project bench`), Propertea beats native JavaScript by 100-1000x transforming contiguous data. Pooled allocations actually beat native after warming the pool.
 
 ### Onward and upward
 
