@@ -33,18 +33,6 @@ registry.map = class MapProxyProperty extends ProxyProperty {
    * @returns The concrete map proxy class.
    */
   concrete(configuration = {}) {
-    const {blueprint} = this;
-    const Proxy = this.generateProxy(configuration);
-    return (blueprint.Proxy ?? ((C) => C))(Proxy);
-  }
-
-  /**
-   * Generates a map proxy class based on the provided configuration.
-   *
-   * @param configuration Optional object containing view-specific configuration values.
-   * @returns The generated map proxy class.
-   */
-  generateProxy(configuration) {
     const {blueprint, property} = this;
     const {dirtyWidth} = property;
     let Concrete;
@@ -216,16 +204,7 @@ registry.map = class MapProxyProperty extends ProxyProperty {
     /**
      * Returns the generated map proxy class.
      */
-    return MapProxy;
+    return (blueprint.Proxy ?? ((C) => C))(MapProxy);
   }
 
-  /**
-   * Creates a concrete map proxy class based on the provided configuration.
-   *
-   * @param configuration Optional object containing view-specific configuration values.
-   * @returns The concrete map proxy class.
-   */
-  map(configuration = {}) {
-    return this.concrete(configuration);
-  }
 };

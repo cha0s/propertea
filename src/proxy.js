@@ -8,4 +8,8 @@ export const SetWithDefaults = Symbol('SetWithDefaults');
 export const ToJSON = Symbol('ToJSON');
 export const ToJSONWithoutDefaults = Symbol('ToJSONWithoutDefaults');
 
-export class ProxyProperty extends Property {}
+export class ProxyProperty extends Property {
+  map(configuration = {}) {
+    return this.concrete(configuration);
+  }
+}

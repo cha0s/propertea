@@ -38,18 +38,6 @@ registry.array = class ArrayProxyProperty extends ProxyProperty {
    * @returns {Class} The generated concrete proxy class.
    */
   concrete(configuration = {}) {
-    const {blueprint} = this;
-    const Proxy = this.generateProxy(configuration);
-    return (blueprint.Proxy ?? ((C) => C))(Proxy);
-  }
-
-  /**
-   * Generates a proxy class for the array property based on the provided configuration.
-   *
-   * @param {Object} configuration - An object containing configuration to be applied to the generated proxy class.
-   * @returns {Class} The generated proxy class.
-   */
-  generateProxy(configuration) {
     const {blueprint, property} = this;
     const {dirtyWidth} = property;
     const onDirty = configuration.onDirty ?? true;
@@ -239,17 +227,7 @@ registry.array = class ArrayProxyProperty extends ProxyProperty {
         }
       }
     };
-    return ArrayProxy;
-  }
-
-  /**
-   * Returns the mapped ArrayProxy class.
-   *
-   * @param {Object} [configuration={}] - An optional object containing configuration to be applied to the generated proxy class.
-   * @returns {Class} The mapped ArrayProxy class.
-   */
-  map(configuration = {}) {
-    return this.concrete(configuration);
+    return (blueprint.Proxy ?? ((C) => C))(ArrayProxy);
   }
 
 }

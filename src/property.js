@@ -11,4 +11,8 @@ export class Property {
   get defaultValue() {
     return this.blueprint.defaultValue;
   }
+
+  get isMappable() {
+    return this.dataWidth > 0;
+  }
 }

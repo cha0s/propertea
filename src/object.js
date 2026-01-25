@@ -191,10 +191,12 @@ registry.object = class extends ProxyProperty {
                 const isProxy = properties[key] instanceof ProxyProperty;
                 return `{
                   const key = '${key}';
-                  ${''/* assign children; either values or new proxy instances */}
-                  ${isProxy ? `this[property[Instance]][key]` : `this[key]`} = ${
-                    isProxy ? `new children[key](dataOffset, dirtyOffset)` : `children[key]`
-                  };
+                  ${
+                    // assign children; either values or new proxy instances
+                    isProxy
+                      ? 'this[property[Instance]][key] = new children[key](dataOffset, dirtyOffset)'
+                      : 'this[key] = children[key]'
+                  }
                   ${''/* increment offsets */}
                   ${(hasProxies && configuration.data) ? `dataOffset += properties[key].dataWidth;` : ''}
                   ${(hasProxies && configuration.dirty) ? `dirtyOffset += properties[key].dirtyWidth;` : ''}
@@ -338,7 +340,7 @@ registry.object = class extends ProxyProperty {
                               if (previous !== value) {
                                 const bit = ${dirtyIndex} + this[DirtyOffset];
                                 configuration.dirty[bit >> 3] |= 1 << (bit & 7);
-                                ${isRoot ? `onDirtyCallback(bit, this);` : ''}
+                                ${isRoot ? 'onDirtyCallback(bit, this);' : ''}
                               }
                             `
                             : ''

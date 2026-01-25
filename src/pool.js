@@ -111,7 +111,7 @@ export class Pool {
     /**
      * A class representing a proxy for an instance in the pool.
      */
-    this.Proxy = class extends property[property.dataWidth > 0 ? 'map' : 'concrete'](this.views) {
+    this.Proxy = class extends property[property.isMappable ? 'map' : 'concrete'](this.views) {
       /**
        * Constructs a new proxy instance.
        *
@@ -143,7 +143,7 @@ export class Pool {
       const {data, dirty, views} = this;
       const {length} = this.proxies;
       // allocate more data buffer if we need it
-      if (this.property.dataWidth > 0 && length === data.nextGrow) {
+      if (this.property.isMappable && length === data.nextGrow) {
         data.memory.grow(1);
         views.data = new DataView(data.memory.buffer);
         data.nextGrow = Math.floor(data.memory.buffer.byteLength / this.property.dataWidth);

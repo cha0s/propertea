@@ -4,7 +4,7 @@
 
 A high-performance low-level state management system for games :video_game:.
 
-Code generation (`new Function`) is used to generate a [monomorphic](https://mrale.ph/blog/2015/01/11/whats-up-with-monomorphism.html),  [proxy-like](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy) shape from a blueprint. This keeps the [inline cache](https://mathiasbynens.be/notes/shapes-ics) hot and performant  while preserving the ergonomics of property access.
+Code generation (`new Function`) is used to generate a [monomorphic](https://mrale.ph/blog/2015/01/11/whats-up-with-monomorphism.html),  [proxy-like](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy) shape from a blueprint. This keeps the [inline cache](https://mathiasbynens.be/notes/shapes-ics) hot and performant while preserving the ergonomics of property access.
 
  
 ## :fire: Features
