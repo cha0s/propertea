@@ -1,0 +1,44 @@
+{
+  "author": "cha0s",
+  "dependencies": {
+    "crunches": "^3.0.1"
+  },
+  "devDependencies": {
+    "@microsoft/api-extractor": "^7.58.7",
+    "@types/node": "^25.6.0",
+    "@vitest/coverage-v8": "^4.1.4",
+    "tsx": "^4.22.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.0.4",
+    "vite-plugin-wabt": "^1.0.0",
+    "vitest": "^4.1.4",
+    "wabt": "^1.0.39"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "imports": {
+    "#types": "./src/types.ts"
+  },
+  "module": "./dist/index.js",
+  "name": "propertea",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cha0s/propertea.git"
+  },
+  "scripts": {
+    "benchmark": "npx tsx benchmark/run.ts",
+    "build": "vite build && tsc && dts-bundle-generator --out-file dist/index.d.ts src/index.ts",
+    "test": "vitest src"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "version": "1.0.2"
+}
