@@ -64,9 +64,9 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
     let dirtyByteWidth = 0;
     for (const key in properties) {
       const propertea = properties[key]
+      this.properties[key] = propertea
       // augment with instance symbol
       defineProperty(propertea, Instance, Symbol(`Propertea.object.property.${key}`))
-      this.properties[key] = propertea
       // map codecs
       codecProperties[key] = propertea.codec
       // accumulate widths
@@ -77,8 +77,6 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
     this.codec = crunchesObject(codecProperties)
     this.byteWidth = byteWidths.some((w) => 0 === w) ? 0 : byteWidths.reduce((l, r) => l + r, 0);
     this.dirtyByteWidth = dirtyByteWidth;
-    // @ts-expect-error TODO - only on root!
-    // defineProperty(this, Instance, Symbol('Propertea.object.Root'))
   }
   concrete<O extends ProxyConcreteConfiguration>(
     configuration: O = {} as any,
@@ -99,20 +97,21 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
     let dirtyIndex = 0;
     return codegen(
       `
+        const {[Instance]: symbol = Symbol.for('Propertea.object.root')} = property;
         return class ConcreteProxy extends Proxy {
           ${Object.entries(properties).map(([key, property]) => {
             const props = `
-              get ['${key}']() { return this[property[Instance]]['${key}']; }
+              get ['${key}']() { return this[symbol]['${key}']; }
               ${
                 property instanceof ProxyProperty
-                  ? `set ['${key}'](value) { this[property[Instance]]['${key}'][Set](value); }`
+                  ? `set ['${key}'](value) { this[symbol]['${key}'][Set](value); }`
                   : (
                     configuration.dirty
                       ? `
                         set ['${key}'](value) {
                           // remember
-                          const previous = this[property[Instance]]['${key}'];
-                          this[property[Instance]]['${key}'] = value;
+                          const previous = this[symbol]['${key}'];
+                          this[symbol]['${key}'] = value;
                           // dirty if different
                           if (previous !== value) {
                             const bit = ${dirtyIndex} + this[DirtyOffset];
@@ -121,7 +120,7 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
                           }
                         }
                       `
-                      : `set ['${key}'](value) { this[property[Instance]]['${key}'] = value; }`
+                      : `set ['${key}'](value) { this[symbol]['${key}'] = value; }`
                   )
               }
             `;
@@ -141,27 +140,27 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
       }
     )
   }
-  generateProxy({
+  generateProxy<O extends ProxyDirtyConfiguration>({
     defaults,
     configuration,
     isRoot,
   }: {
     defaults: Record<string, any>,
-    configuration: Partial<ProxyDataConfiguration> & Partial<ProxyDirtyConfiguration>,
+    configuration: Partial<ProxyDataConfiguration> & Partial<O>,
     isRoot: boolean,
   }): ProxyClass<InferObject<P>> {
     const { properties } = this;
     const { dirty } = configuration;
     // proxy API
-    class ObjectProxy implements Omit<ProxyClass<InferObject<P>>, typeof SetWithDefaults | typeof Set> {
+    class ObjectProxy {
       [ToJSON]() {
         const json: Record<string, any> = {};
         for (const key in properties) {
           if (properties[key] instanceof ProxyProperty) {
-            json[key] = this[key][ToJSON]();
+            json[key] = (this as Record<string, any>)[key][ToJSON]();
           }
           else {
-            json[key] = this[key];
+            json[key] = (this as Record<string, any>)[key];
           }
         }
         return json;
@@ -171,10 +170,10 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
         for (const key in properties) {
           let keyJson;
           if (properties[key] instanceof ProxyProperty) {
-            keyJson = this[key][ToJSONWithoutDefaults](defaults?.[key]);
+            keyJson = (this as Record<string, any>)[key][ToJSONWithoutDefaults](defaults?.[key]);
           }
-          else if ((defaults?.[key] ?? properties[key].defaultValue) !== this[key]) {
-            keyJson = this[key];
+          else if ((defaults?.[key] ?? properties[key].defaultValue) !== (this as Record<string, any>)[key]) {
+            keyJson = (this as Record<string, any>)[key];
           }
           if (undefined !== keyJson) {
             json ??= {};
@@ -183,6 +182,11 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
         }
         return json;
       }
+    }
+    interface ObjectProxy {
+      [Diff](): Record<string, any> | undefined
+      [DirtyOffset]: number
+      [MarkClean](): void
     }
     // dirty API
     if (dirty) {
@@ -194,11 +198,11 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
           let keyDiff;
           // recur
           if (property instanceof ProxyProperty) {
-            keyDiff = this[key][Diff]();
+            keyDiff = (this as Record<string, any>)[key][Diff]();
           }
           // check dirty bit
           else if (dirty[dirtyOffset >> 3] & (1 << (dirtyOffset & 7))) {
-            keyDiff = this[key];
+            keyDiff = (this as Record<string, any>)[key];
           }
           if (undefined !== keyDiff) {
             diff ??= {};
@@ -213,7 +217,7 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
         for (const key in properties) {
           const property = properties[key];
           if (property instanceof ProxyProperty) {
-            this[key][MarkClean]();
+            (this as Record<string, any>)[key][MarkClean]();
           }
           else if (configuration.dirty) {
             configuration.dirty[bit >> 3] &= ~(1 << (bit & 7));
@@ -225,12 +229,21 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
     const hasProxies = Object.values(properties)
       .some((property) => property instanceof ProxyProperty);
     return codegen(`
-      const {byteWidth, dirtyByteWidth} = property;
+      const {
+        byteWidth,
+        defaultValue,
+        dirtyByteWidth,
+        [Instance]: symbol = Symbol.for('Propertea.object.root'),
+      } = property;
       return class FixedObjectProxy extends ObjectProxy {
         constructor(dataIndex, dirtyIndex) {
           super(dataIndex, dirtyIndex);
-          this[property[Instance]] = {
-            ${Object.keys(properties).map((key) => `'${key}': undefined`).join(',')}
+          this[symbol] = {
+            ${
+              Object.entries(properties)
+                .filter(([, property]) => property instanceof ProxyProperty)
+                .map(([key]) => `'${key}': undefined`).join(',')
+            }
           };
           let dataOffset = ${configuration.data ? (isRoot ? 'dataIndex * byteWidth' : 'dataIndex') : 0};
           let dirtyOffset = ${configuration.dirty ? (isRoot ? 'dataIndex * dirtyByteWidth' : 'dirtyIndex') : 0};
@@ -246,7 +259,7 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
                   ${
                     // assign defaults; either values or new proxy instances
                     isProxy
-                      ? 'this[property[Instance]][key] = new defaults[key](dataOffset, dirtyOffset)'
+                      ? 'this[symbol][key] = new defaults[key](dataOffset, dirtyOffset)'
                       : 'this[key] = defaults[key]'
                   }
                   ${''/* increment offsets */}
@@ -272,8 +285,8 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
                 if ('${key}' in value) {
                   localValue = value['${key}'];
                 }
-                else if (property.defaultValue && '${key}' in property.defaultValue) {
-                  localValue = property.defaultValue['${key}'];
+                else if (defaultValue && '${key}' in defaultValue) {
+                  localValue = defaultValue['${key}'];
                 }
                 else {
                   localValue = properties['${key}'].defaultValue;
@@ -290,8 +303,8 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
             ${
               Object.keys(properties).map((key) => `{
                 let localValue;
-                if (property.defaultValue && '${key}' in property.defaultValue) {
-                  localValue = property.defaultValue['${key}'];
+                if (defaultValue && '${key}' in defaultValue) {
+                  localValue = defaultValue['${key}'];
                 }
                 else {
                   localValue = properties['${key}'].defaultValue;
@@ -308,7 +321,7 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
             configuration.dirty
             ? `
               let bit = this[DirtyOffset];
-              for (let i = 0; i < property.dirtyByteWidth; ++i) {
+              for (let i = 0; i < dirtyByteWidth; ++i) {
                 if (0 === (configuration.dirty[bit >> 3] & 1 << (bit & 7))) {
                   configuration.dirty[bit >> 3] |= 1 << (bit & 7);
                   onDirtyCallback(bit, this);
@@ -356,6 +369,7 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
     // apply blueprint proxy
     return codegen(
       `
+        const {[Instance]: symbol = Symbol.for('Propertea.object.root')} = property;
         return class MappedProxy extends Proxy {
           ${(() => {
             let dataIndex = 0;
@@ -364,7 +378,7 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
               const props = `
                 ${
                   property instanceof ProxyProperty
-                  ? `get ['${key}']() { return this[property[Instance]]['${key}']; }`
+                  ? `get ['${key}']() { return this[symbol]['${key}']; }`
                   : `
                     get ['${key}']() {
                       return properties['${key}'].codec.decodeFrom(configuration.data, {
@@ -375,7 +389,7 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
                 }
                 ${
                   property instanceof ProxyProperty
-                    ? `set ['${key}'](value) { this[property[Instance]]['${key}'][Set](value); }`
+                    ? `set ['${key}'](value) { this[symbol]['${key}'][Set](value); }`
                     : (
                       `
                         set ['${key}'](value) {
@@ -434,5 +448,3 @@ export function object<P extends Record<string, Property<unknown>>>(
 ) {
   return new ProperteaObject(properties)
 }
-
-// export const object = (properties: Props) => new ProperteaObject(properties)
