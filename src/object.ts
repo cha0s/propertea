@@ -2,7 +2,20 @@ import { object as crunchesObject, type CrunchesType } from 'crunches'
 
 import { Property } from '#types'
 
-import { Diff, Instance, MarkClean, ProxyProperty, Set, SetWithDefaults, ToJSON, ToJSONWithoutDefaults } from './proxy.js';
+import {
+  Diff,
+  Instance,
+  MarkClean,
+  type ProxyConcreteConfiguration,
+  type ProxyDataConfiguration,
+  type ProxyDirtyConfiguration,
+  type ProxyMappedConfiguration,
+  ProxyProperty,
+  Set,
+  SetWithDefaults,
+  ToJSON,
+  ToJSONWithoutDefaults,
+} from './proxy.js';
 
 const DataOffset = Symbol('Propertea.object.DataOffset');
 const DirtyOffset = Symbol('Propertea.object.DirtyOffset');
@@ -11,15 +24,6 @@ type Props = Record<string, Property<unknown>>
 type AugmentedProps = Record<string, Property<unknown> & { [Instance]: symbol }>
 
 type ProxyCallback = (p: ProperteaObject) => ProperteaObject
-
-type ConcreteProxyConfiguration = {
-  dirty?: Uint8Array
-  onDirty?: (bit?: number, proxy?: any) => void
-}
-
-type MappedProxyConfiguration = ConcreteProxyConfiguration & {
-  data: DataView
-}
 
 function codegen(code: string, context = {}) {
   return (new Function(Object.keys(context).join(','), code))(...Object.values(context));
@@ -67,7 +71,7 @@ export class ProperteaObject extends ProxyProperty<any> {
     // TODO - only on root!
     // defineProperty(this, Instance, Symbol('Propertea.object.Root'))
   }
-  concrete(configuration: ConcreteProxyConfiguration = {}, isRoot = true) {
+  concrete(configuration: ProxyConcreteConfiguration = {}, isRoot = true) {
     const {properties} = this;
     // compute defaults
     const defaults: Record<string, any> = {};
@@ -128,7 +132,7 @@ export class ProperteaObject extends ProxyProperty<any> {
     isRoot,
   }: {
     defaults: Record<string, any>,
-    configuration: ConcreteProxyConfiguration & { data?: DataView },
+    configuration: Partial<ProxyDataConfiguration> & Partial<ProxyDirtyConfiguration>,
     isRoot: boolean,
   }) {
     const {properties} = this;
@@ -316,7 +320,7 @@ export class ProperteaObject extends ProxyProperty<any> {
     });
   }
 
-  map(configuration: MappedProxyConfiguration, isRoot = true) {
+  mapped(configuration: ProxyMappedConfiguration, isRoot = true) {
     const {properties} = this;
     const onDirty = configuration.onDirty ?? true;
     const onDirtyCallback = 'function' === typeof onDirty ? onDirty : nop;
@@ -325,7 +329,7 @@ export class ProperteaObject extends ProxyProperty<any> {
     for (const key in properties) {
       const property = properties[key];
       defaults[key] = property instanceof ProxyProperty
-        ? property.map(configuration, false)
+        ? property.mapped(configuration, false)
         : property.defaultValue;
     }
     const Proxy = this.generateProxy({defaults, configuration, isRoot});

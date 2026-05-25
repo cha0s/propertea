@@ -90,7 +90,7 @@ test('mapped onDirty', () => {
     z: uint8().default(34),
     a: object({n: uint8()}),
   });
-  const Proxy = property.map({data, dirty, onDirty: () => { dirties += 1; }});
+  const Proxy = property.mapped({data, dirty, onDirty: () => { dirties += 1; }});
   expect(dirties).toEqual(0);
   const proxy = new Proxy(0);
   proxy[SetWithDefaults]();
@@ -166,7 +166,7 @@ test('mapped nested', () => {
   const property = object({
     o: object({x: uint8()}),
   });
-  const Proxy = property.map({data});
+  const Proxy = property.mapped({data});
   const proxy = new Proxy(0);
   expect(proxy).toMatchObject({o: {x: 0}});
   expect(data.getUint8(0)).toEqual(0);
@@ -184,7 +184,7 @@ test('mapped diff', () => {
     z: uint8().default(34),
     a: object({n: uint8()}),
   });
-  const Proxy = property.map({data, dirty});
+  const Proxy = property.mapped({data, dirty});
   const proxy = new Proxy(0);
   dirty.fill(0);
   expect(proxy[Diff]()).toEqual(undefined);
