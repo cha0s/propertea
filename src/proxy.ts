@@ -21,17 +21,13 @@ export type ProxyConcreteConfiguration = Partial<ProxyDirtyConfiguration>
 export type ProxyMappedConfiguration = Partial<ProxyDirtyConfiguration> & ProxyDataConfiguration
 
 export abstract class ProxyProperty<Output> extends Property<Output> {
-  // abstract [Set](): object
-  // abstract [SetWithDefaults](): object
-  // abstract [ToJSON](): object
-  // abstract [ToJSONWithoutDefaults](): object
-  // abstract [Diff]?(): object
-  // abstract [MarkClean]?(): object
-
-
   abstract concrete(configuration: ProxyConcreteConfiguration, isRoot: boolean): any
   abstract mapped(configuration: ProxyMappedConfiguration, isRoot: boolean): any
-  // map(configuration = {}) {
-  //   return this.concrete(configuration);
-  // }
+}
+
+export interface ProxyClass<T> {
+  [Set](value?: Partial<T>): object
+  [SetWithDefaults](value?: Partial<T>): object
+  [ToJSON](): Record<string, any>
+  [ToJSONWithoutDefaults](defaults?: Partial<T>): Record<string, any> | undefined
 }

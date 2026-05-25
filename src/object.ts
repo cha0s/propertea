@@ -10,6 +10,7 @@ import {
   type ProxyDataConfiguration,
   type ProxyDirtyConfiguration,
   type ProxyMappedConfiguration,
+  type ProxyClass,
   ProxyProperty,
   Set,
   SetWithDefaults,
@@ -21,9 +22,19 @@ const DataOffset = Symbol('Propertea.object.DataOffset');
 const DirtyOffset = Symbol('Propertea.object.DirtyOffset');
 
 type Props = Record<string, Property<unknown>>
-type AugmentedProps = Record<string, Property<unknown> & { [Instance]: symbol }>
 
-type ProxyCallback = (p: ProperteaObject) => ProperteaObject
+export type InferObject<P extends Props> = { [K in keyof P]:  P[K]['_T'] }
+
+type ProxyCreator<P extends Props> = new (dataIndex: number) => (
+  ProxyClass<InferObject<P>> & InferObject<P>
+)
+
+type ProxyCreatorWithDirtyTracking<P extends Props> = new (dataIndex: number, dirtyIndex?: number) => (
+  ProxyClass<InferObject<P>> & InferObject<P> & {
+    [Diff](): Record<string, any> | undefined
+    [MarkClean](): object
+  }
+)
 
 function codegen(code: string, context = {}) {
   return (new Function(Object.keys(context).join(','), code))(...Object.values(context));
@@ -37,18 +48,17 @@ function defineProperty<T extends object, K extends PropertyKey, V>(
   Object.defineProperty(obj, key, { value });
 }
 
-const proxyIdentity = (i) => i
-
 const nop = () => {};
 
-export class ProperteaObject extends ProxyProperty<any> {
+export class ProperteaObject<P extends Record<string, Property<unknown>>>
+  extends ProxyProperty<InferObject<P>>
+{
   codec: ReturnType<typeof crunchesObject>
-  properties: AugmentedProps
-  proxy: ProxyCallback | undefined
+  properties: P
 
-  constructor(properties: Props, proxy?: ProxyCallback) {
+  constructor(properties: P) {
     super()
-    this.properties = {}
+    this.properties = {} as P
     const codecProperties: Record<string, CrunchesType<unknown>> = {}
     const byteWidths = [];
     let dirtyByteWidth = 0;
@@ -67,11 +77,15 @@ export class ProperteaObject extends ProxyProperty<any> {
     this.codec = crunchesObject(codecProperties)
     this.byteWidth = byteWidths.some((w) => 0 === w) ? 0 : byteWidths.reduce((l, r) => l + r, 0);
     this.dirtyByteWidth = dirtyByteWidth;
-    this.proxy = proxy
-    // TODO - only on root!
+    // @ts-expect-error TODO - only on root!
     // defineProperty(this, Instance, Symbol('Propertea.object.Root'))
   }
-  concrete(configuration: ProxyConcreteConfiguration = {}, isRoot = true) {
+  concrete<O extends ProxyConcreteConfiguration>(
+    configuration: O = {} as any,
+    isRoot = true,
+  ):
+    O['dirty'] extends Uint8Array ? ProxyCreatorWithDirtyTracking<P> : ProxyCreator<P>
+  {
     const {properties} = this;
     // compute defaults
     const defaults: Record<string, any> = {};
@@ -83,8 +97,8 @@ export class ProperteaObject extends ProxyProperty<any> {
     }
     const Proxy = this.generateProxy({defaults, configuration, isRoot});
     let dirtyIndex = 0;
-    return (this.proxy ?? proxyIdentity)(
-      codegen(`
+    return codegen(
+      `
         return class ConcreteProxy extends Proxy {
           ${Object.entries(properties).map(([key, property]) => {
             const props = `
@@ -115,7 +129,8 @@ export class ProperteaObject extends ProxyProperty<any> {
             return props;
           }).join('\n')}
         }
-      `, {
+      `,
+      {
         configuration,
         DirtyOffset,
         Instance,
@@ -123,8 +138,8 @@ export class ProperteaObject extends ProxyProperty<any> {
         property: this,
         Proxy,
         Set,
-      }),
-    );
+      }
+    )
   }
   generateProxy({
     defaults,
@@ -134,13 +149,13 @@ export class ProperteaObject extends ProxyProperty<any> {
     defaults: Record<string, any>,
     configuration: Partial<ProxyDataConfiguration> & Partial<ProxyDirtyConfiguration>,
     isRoot: boolean,
-  }) {
-    const {properties} = this;
-    const onDirty = configuration.onDirty ?? true;
+  }): ProxyClass<InferObject<P>> {
+    const { properties } = this;
+    const { dirty } = configuration;
     // proxy API
-    class ObjectProxy {
+    class ObjectProxy implements Omit<ProxyClass<InferObject<P>>, typeof SetWithDefaults | typeof Set> {
       [ToJSON]() {
-        const json = {};
+        const json: Record<string, any> = {};
         for (const key in properties) {
           if (properties[key] instanceof ProxyProperty) {
             json[key] = this[key][ToJSON]();
@@ -151,8 +166,8 @@ export class ProperteaObject extends ProxyProperty<any> {
         }
         return json;
       }
-      [ToJSONWithoutDefaults](defaults) {
-        let json;
+      [ToJSONWithoutDefaults](defaults?: Record<string, any>) {
+        let json: Record<string, any> | undefined = undefined;
         for (const key in properties) {
           let keyJson;
           if (properties[key] instanceof ProxyProperty) {
@@ -170,9 +185,9 @@ export class ProperteaObject extends ProxyProperty<any> {
       }
     }
     // dirty API
-    if (onDirty) {
+    if (dirty) {
       ObjectProxy.prototype[Diff] = function() {
-        let diff;
+        let diff: Record<string, any> | undefined;
         let dirtyOffset = this[DirtyOffset];
         for (const key in properties) {
           const property = properties[key];
@@ -182,7 +197,7 @@ export class ProperteaObject extends ProxyProperty<any> {
             keyDiff = this[key][Diff]();
           }
           // check dirty bit
-          else if (configuration.dirty[dirtyOffset >> 3] & (1 << (dirtyOffset & 7))) {
+          else if (dirty[dirtyOffset >> 3] & (1 << (dirtyOffset & 7))) {
             keyDiff = this[key];
           }
           if (undefined !== keyDiff) {
@@ -320,11 +335,16 @@ export class ProperteaObject extends ProxyProperty<any> {
     });
   }
 
-  mapped(configuration: ProxyMappedConfiguration, isRoot = true) {
+  mapped<O extends ProxyMappedConfiguration>(
+    configuration: O = {} as any,
+    isRoot = true,
+  ):
+    O['dirty'] extends Uint8Array ? ProxyCreatorWithDirtyTracking<P> : ProxyCreator<P>
+  {
     const {properties} = this;
     const onDirty = configuration.onDirty ?? true;
     const onDirtyCallback = 'function' === typeof onDirty ? onDirty : nop;
-    const defaults = {};
+    const defaults: Record<string, any> = {};
     // compute defaults
     for (const key in properties) {
       const property = properties[key];
@@ -334,8 +354,8 @@ export class ProperteaObject extends ProxyProperty<any> {
     }
     const Proxy = this.generateProxy({defaults, configuration, isRoot});
     // apply blueprint proxy
-    return (this.proxy ?? proxyIdentity)(
-      codegen(`
+    return codegen(
+      `
         return class MappedProxy extends Proxy {
           ${(() => {
             let dataIndex = 0;
@@ -392,7 +412,8 @@ export class ProperteaObject extends ProxyProperty<any> {
 
           })()}
         }
-      `, {
+      `,
+      {
         configuration,
         DataOffset,
         DirtyOffset,
@@ -402,17 +423,16 @@ export class ProperteaObject extends ProxyProperty<any> {
         property: this,
         Proxy,
         Set,
-      }),
-    );
+      }
+    )
   }
 
 }
 
-export function object(
-  properties: Props,
-  proxy?: ProxyCallback
-): ProperteaObject {
-  return new ProperteaObject(properties, proxy)
+export function object<P extends Record<string, Property<unknown>>>(
+  properties: P,
+) {
+  return new ProperteaObject(properties)
 }
 
 // export const object = (properties: Props) => new ProperteaObject(properties)
