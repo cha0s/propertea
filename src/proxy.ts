@@ -1,4 +1,5 @@
-import { Property } from '#types';
+import { type DeepPartial } from './internal-types.ts';
+import { Property } from './types.ts';
 
 export const Diff = Symbol('Propertea.Diff');
 export const Instance = Symbol('Propertea.Instance');
@@ -8,26 +9,47 @@ export const SetWithDefaults = Symbol('Propertea.SetWithDefaults');
 export const ToJSON = Symbol('Propertea.ToJSON');
 export const ToJSONWithoutDefaults = Symbol('Propertea.ToJSONWithoutDefaults');
 
-export type ProxyDirtyConfiguration = {
-  dirty: Uint8Array
-  onDirty: (bit?: number, proxy?: any) => void
+export interface ProxyClass<T> {
+  [Set](value?: DeepPartial<T>): object
+  [SetWithDefaults](value?: DeepPartial<T>): object
+  [ToJSON](): Record<string, any>
+  [ToJSONWithoutDefaults](defaults?: DeepPartial<T>): Record<string, any> | undefined
 }
+
+export type ProxyMixed<T, O> = (
+  ProxyClass<T> & T & (
+    O extends true
+      ? {
+        [Diff](): Record<string, any> | undefined
+        [MarkClean](): void
+      }
+      : {}
+  )
+)
+
+export type ProxyMixedCreator<T, O> = new (dataIndex: number) => ProxyMixed<T, O>
 
 export type ProxyDataConfiguration = {
   data: DataView
 }
 
-export type ProxyConcreteConfiguration = Partial<ProxyDirtyConfiguration>
-export type ProxyMappedConfiguration = Partial<ProxyDirtyConfiguration> & ProxyDataConfiguration
+export type ProxyOnDirtyCallback = (bit?: number, proxy?: any) => void
 
-export abstract class ProxyProperty<Output> extends Property<Output> {
-  abstract concrete(configuration: ProxyConcreteConfiguration, isRoot: boolean): any
-  abstract mapped(configuration: ProxyMappedConfiguration, isRoot: boolean): any
+export type ProxyDirtyConfiguration = {
+  dirty: Uint8Array
+  onDirty: boolean | ProxyOnDirtyCallback
 }
 
-export interface ProxyClass<T> {
-  [Set](value?: Partial<T>): object
-  [SetWithDefaults](value?: Partial<T>): object
-  [ToJSON](): Record<string, any>
-  [ToJSONWithoutDefaults](defaults?: Partial<T>): Record<string, any> | undefined
+export type ProxyCreatorConfiguration = Partial<ProxyDirtyConfiguration> & Partial<ProxyDataConfiguration>
+
+export abstract class ProxyProperty<T extends object> extends Property<T> {
+  declare _T: T
+  abstract concrete<O extends ProxyCreatorConfiguration>(
+    configuration: O,
+    isRoot: boolean,
+  ): ProxyMixedCreator<T, O['dirty'] extends Uint8Array ? true : false>
+  abstract mapped<O extends ProxyCreatorConfiguration>(
+    configuration: O,
+    isRoot: boolean,
+  ): ProxyMixedCreator<T, O['dirty'] extends Uint8Array ? true : false>
 }

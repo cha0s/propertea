@@ -1,6 +1,8 @@
 import { resolve } from 'node:path'
 
 import { defineConfig } from 'vite'
+import ViteWabt from 'vite-plugin-wabt';
+import wabt from 'wabt';
 
 export default defineConfig({
   build: {
@@ -12,4 +14,7 @@ export default defineConfig({
     sourcemap: true,
     target: 'es2023',
   },
+  plugins: [
+    ViteWabt(await wabt())
+  ],
 })

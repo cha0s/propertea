@@ -1,6 +1,6 @@
 import * as crunches from 'crunches'
 
-import { Property } from '#types'
+import { Property } from './types.ts'
 
 abstract class NumberProperty extends Property<number> {
   defaultValue = 0

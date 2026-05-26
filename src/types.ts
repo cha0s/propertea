@@ -17,4 +17,3 @@ export abstract class Property<T> {
     return this.byteWidth > 0;
   }
 }
-

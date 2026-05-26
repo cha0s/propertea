@@ -23,9 +23,6 @@
   "files": [
     "dist"
   ],
-  "imports": {
-    "#types": "./src/types.ts"
-  },
   "module": "./dist/index.js",
   "name": "propertea",
   "repository": {
