@@ -51,10 +51,18 @@ test('nested', () => {
   });
   const Map = property.concrete();
   const proxy = new Map(0);
-  proxy.set(0, [[0, {x: 3}]]);
+  proxy.set(0, [[0, {x: 3}]] as any);
   expect(proxy[ToJSON]()).toEqual([[0, [[0, {x: 3}]]]]);
   proxy.get(0)!.get(0)!.x = 1;
   expect(proxy[ToJSON]()).toEqual([[0, [[0, {x: 1}]]]]);
+  const Map2 = map({
+    key: uint8(),
+    value: object({ x: uint8() }),
+  }).concrete();
+  const proxy2 = new Map2(0);
+  proxy2.set(0, {x: 5});
+  proxy.set(0, proxy2);
+  expect(proxy[ToJSON]()).toEqual([[0, [[0, {x: 5}]]]]);
 });
 
 test('dirty', () => {
@@ -90,7 +98,7 @@ test('dirty nested', () => {
   const Map = property.concrete({dirty});
   const proxy = new Map(0);
   const value = {x: 3};
-  proxy.set(0, [[0, value]]);
+  proxy.set(0, [[0, value]] as any);
   expect(proxy[Diff]()).toEqual([[0, [[0, {x: 3}]]]]);
   proxy[MarkClean]();
   proxy.get(0)!.get(0)!.x = 2;

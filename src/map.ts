@@ -87,6 +87,9 @@ export class ProperteaMap<
       constructor() {
         this[ProperteaSet](defaultValue);
       }
+      [Symbol.iterator]() {
+        return this.$$map.entries()
+      }
       [ProperteaSet](value?: MapSettable<Key['_T'], Value['_T']>): void {
         if (!value) {
           return;
