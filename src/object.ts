@@ -25,23 +25,11 @@ const DirtyOffset = Symbol('Propertea.object.DirtyOffset');
 
 type Props = Record<string, Property<unknown>>
 
-// type InferObjectGetters<P extends Props> = {
-//   get [K in keyof P](): P[K] extends ProxyProperty<any>
-//     ? ProxyMixed<P[K]['_T'], true>
-//     : P[K]['_T']
-// }
-
-// type InferObjectSetters<P extends Props> = {
-//   set [K in keyof P](v: Props[K]['_Input'])
-// }
-
-// type InferObject<P extends Props> = InferObjectGetters<P> & InferObjectSetters<P>
 type InferObject<Props extends Record<string, Property<any>>> = {
   [K in keyof Props]: Props[K] extends ProxyProperty<any>
     ? ProxyMixed<Props[K]['_T'], true>
     : Props[K]['_T']
 }
-// type InferObject<P extends Props> = { [K in keyof P]:  P[K]['_T'] }
 
 function codegen(code: string, context = {}) {
   return (new Function(Object.keys(context).join(','), code))(...Object.values(context));

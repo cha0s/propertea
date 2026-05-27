@@ -170,3 +170,13 @@ test('remove element (proxy)', () => {
   expect(proxy.pool.freeList.length).toEqual(0);
   expect(proxy[Diff]()).toEqual({0: {x: 1}, 1: {x: 3}});
 });
+
+test('decoration', () => {
+  const property = array(
+    { element: uint8() },
+    (O) => class extends O { foo() { return 42 }},
+  );
+  const Proxy = property.concrete();
+  const proxy = new Proxy(0);
+  expect(proxy.foo()).to.equal(42)
+});
