@@ -41,22 +41,22 @@ interface MapProxyInterface<K, V, Stored = V> {
 const nop = () => {};
 
 export class ProperteaMap<
-  K extends Property<MapKey>,
-  V extends Property<unknown>,
-  E extends object = {},
-  Stored = V extends ProxyProperty<any> ? ProxyMixed<V['_T'], true> : V['_T'],
+  Key extends Property<MapKey>,
+  Value extends Property<unknown>,
+  Extension extends object = {},
+  Stored = Value extends ProxyProperty<any> ? ProxyMixed<Value['_T'], true> : Value['_T'],
 >
-  extends ProxyProperty<MapProxyInterface<K['_T'], V['_T'], Stored>, Iterable<[K['_T'], V['_T']]> | MapDiff<K['_T'], V['_T']>>
+  extends ProxyProperty<MapProxyInterface<Key['_T'], Value['_T'], Stored>, Extension>
 {
 
   codec: ReturnType<typeof crunchesMap>
-  decorate: ProxyDecorator<MapProxyInterface<K['_T'], V['_T'], Stored>, E> | undefined
-  keyProperty: K
-  valueProperty: V
+  decorate: ProxyDecorator<MapProxyInterface<Key['_T'], Value['_T'], Stored>, Extension> | undefined
+  keyProperty: Key
+  valueProperty: Value
 
   constructor(
-    { key, value }: { key: K; value: V },
-    decorate?: ProxyDecorator<MapProxyInterface<K['_T'], V['_T'], Stored>, E>,
+    { key, value }: { key: Key; value: Value },
+    decorate?: ProxyDecorator<MapProxyInterface<Key['_T'], Value['_T'], Stored>, Extension>,
   ) {
     super();
     this.decorate = decorate
@@ -77,12 +77,12 @@ export class ProperteaMap<
     const onDirtyCallback = 'function' === typeof onDirty ? onDirty : nop;
 
     class MapProxy {
-      $$map: Map<K['_T'], V['_T']> = new Map()
-      dirty = new Set<K['_T']>();
+      $$map: Map<Key['_T'], Value['_T']> = new Map()
+      dirty = new Set<Key['_T']>();
       constructor() {
         this[ProperteaSet](defaultValue);
       }
-      [ProperteaSet](value?: Iterable<[K['_T'], V['_T']]> | MapDiff<K['_T'], V['_T']>): void {
+      [ProperteaSet](value?: Iterable<[Key['_T'], Value['_T']]> | MapDiff<Key['_T'], Value['_T']>): void {
         if (!value) {
           return;
         }
@@ -91,7 +91,7 @@ export class ProperteaMap<
           this.set(entry[0], entry[1]);
         }
       }
-      [SetWithDefaults](value?: Iterable<[K['_T'], V['_T']]> | MapDiff<K['_T'], V['_T']>): void {
+      [SetWithDefaults](value?: Iterable<[Key['_T'], Value['_T']]> | MapDiff<Key['_T'], Value['_T']>): void {
         this[ProperteaSet](value)
       }
       clear() {
@@ -99,10 +99,10 @@ export class ProperteaMap<
           this.delete(entry[0]);
         }
       }
-      get(key: K['_T']) {
+      get(key: Key['_T']) {
         return this.$$map.get(key)
       }
-      [ToJSONWithoutDefaults](_defaults?: any): MapEntry<K['_T'], V['_T']>[] | undefined {
+      [ToJSONWithoutDefaults](_defaults?: any): MapEntry<Key['_T'], Value['_T']>[] | undefined {
         return this[ToJSON]()
       }
     }
@@ -110,14 +110,14 @@ export class ProperteaMap<
     interface MapProxy {
       [Diff](): Record<string, any> | undefined
       [MarkClean](): void
-      [ProperteaSet](value?: Iterable<[K['_T'], V['_T']]> | MapDiff<K['_T'], V['_T']>): void
-      [SetWithDefaults](value?: Iterable<[K['_T'], V['_T']]> | MapDiff<K['_T'], V['_T']>): void
-      [ToJSON](): MapEntry<K['_T'], V>[]
-      [ToJSONWithoutDefaults](defaults?: any): MapEntry<K['_T'], V>[] | undefined
+      [ProperteaSet](value?: Iterable<[Key['_T'], Value['_T']]> | MapDiff<Key['_T'], Value['_T']>): void
+      [SetWithDefaults](value?: Iterable<[Key['_T'], Value['_T']]> | MapDiff<Key['_T'], Value['_T']>): void
+      [ToJSON](): MapEntry<Key['_T'], Value>[]
+      [ToJSONWithoutDefaults](defaults?: any): MapEntry<Key['_T'], Value>[] | undefined
       pool: any
-      delete(key: K['_T']): void
-      get(key: K['_T']): Stored | undefined
-      set(key: K['_T'], value: V['_T'] | undefined): void
+      delete(key: Key['_T']): void
+      get(key: Key['_T']): Stored | undefined
+      set(key: Key['_T'], value: Value['_T'] | undefined): void
     }
 
     if (valueProperty instanceof ProxyProperty) {
@@ -141,31 +141,31 @@ export class ProperteaMap<
           },
         } : undefined,
       );
-      MapProxy.prototype[ToJSON] = function(): MapEntry<K['_T'], V['_T']>[] {
+      MapProxy.prototype[ToJSON] = function(): MapEntry<Key['_T'], Value['_T']>[] {
         const json: any[] = [];
         for (const entry of this.$$map) {
           json.push([entry[0], entry[1][ToJSON]()]);
         }
         return json;
       }
-      MapProxy.prototype.delete = function(key: K['_T']) {
+      MapProxy.prototype.delete = function(key: Key['_T']) {
         if (this.$$map.has(key)) {
           pool.free(this.get(key));
         }
         this.$$map.delete(key);
         this.dirty.add(key);
       }
-      MapProxy.prototype.set = function(key: K['_T'], value: V['_T']) {
+      MapProxy.prototype.set = function(key: Key['_T'], value: Value['_T']) {
         this.dirty.add(key);
         if (this.$$map.has(key)) {
-          this.$$map.get(key)[ProperteaSet](value instanceof Concrete ? value[ToJSON]() : value);
+          this.$$map.get(key)[ProperteaSet](value instanceof Concrete ? (value as typeof valueProperty['_T'])[ToJSON]() : value);
         }
         else {
           const localValue = pool.allocate(undefined, (proxy: any) => {
             proxy[Key] = key;
             proxy[MapSymbol] = this;
           });
-          localValue[ProperteaSet](value instanceof Concrete ? value[ToJSON]() : value);
+          localValue[ProperteaSet](value instanceof Concrete ? (value as typeof valueProperty['_T'])[ToJSON]() : value);
           this.$$map.set(key, localValue)
         }
       }
@@ -188,18 +188,18 @@ export class ProperteaMap<
       }
     }
     else {
-      MapProxy.prototype[ToJSON] = function(): MapEntry<K['_T'], V['_T']>[] {
+      MapProxy.prototype[ToJSON] = function(): MapEntry<Key['_T'], Value['_T']>[] {
         const json: any[] = [];
         for (const entry of this.$$map) {
           json.push(entry);
         }
         return json;
       }
-      MapProxy.prototype.delete = function(key: K['_T']) {
+      MapProxy.prototype.delete = function(key: Key['_T']) {
         this.dirty.add(key);
         this.$$map.delete(key);
       }
-      MapProxy.prototype.set = function(key: K['_T'], value: V['_T']) {
+      MapProxy.prototype.set = function(key: Key['_T'], value: Value['_T']) {
         this.dirty.add(key);
         this.$$map.set(key, value);
       }
@@ -218,9 +218,9 @@ export class ProperteaMap<
     }
     return (
       this.decorate
-        ? this.decorate(MapProxy as unknown as new (index: number) => MapProxyInterface<K['_T'], V['_T'], Stored>)
+        ? this.decorate(MapProxy as unknown as new (index: number) => MapProxyInterface<Key['_T'], Value['_T'], Stored>)
         : MapProxy
-      ) as ProxyMixedCreator<MapProxyInterface<K['_T'], V['_T'], Stored> & E, HasDirty<O>>
+      ) as ProxyMixedCreator<MapProxyInterface<Key['_T'], Value['_T'], Stored> & Extension, HasDirty<O>>
   }
 
   mapped<O extends ProxyCreatorConfiguration>(
