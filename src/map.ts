@@ -24,14 +24,15 @@ type MapKey = number | string
 
 type MapDiff<K, V> = MapEntry<K, V>[]
 type MapEntry<K, V> = [K, V]
+type MapSettable<K, V> = Iterable<[K, V]> | MapDiff<K, V>
 
 interface MapProxyInterface<K, V, Stored = V> {
   dirty: Set<number>
   pool: any
   [ToJSON](): MapEntry<K, V>[]
   [ToJSONWithoutDefaults](defaults?: any): MapEntry<K, V>[] | undefined
-  [ProperteaSet](value?: Iterable<[K, V]> | MapDiff<K, V>): void
-  [SetWithDefaults](value?: Iterable<[K, V]> | MapDiff<K, V>): void
+  [ProperteaSet](value?: MapSettable<K, V>): void
+  [SetWithDefaults](value?: MapSettable<K, V>): void
   clear(): void
   delete(key: K): void
   get(key: K): Stored | undefined
@@ -46,7 +47,11 @@ export class ProperteaMap<
   Extension extends object = {},
   Stored = Value extends ProxyProperty<any> ? ProxyMixed<Value['_T'], true> : Value['_T'],
 >
-  extends ProxyProperty<MapProxyInterface<Key['_T'], Value['_T'], Stored>, Extension>
+  extends ProxyProperty<
+    MapProxyInterface<Key['_T'], Value['_T'], Stored>,
+    Extension,
+    MapSettable<Key['_T'], Value['_T']>
+  >
 {
 
   codec: ReturnType<typeof crunchesMap>
@@ -82,7 +87,7 @@ export class ProperteaMap<
       constructor() {
         this[ProperteaSet](defaultValue);
       }
-      [ProperteaSet](value?: Iterable<[Key['_T'], Value['_T']]> | MapDiff<Key['_T'], Value['_T']>): void {
+      [ProperteaSet](value?: MapSettable<Key['_T'], Value['_T']>): void {
         if (!value) {
           return;
         }
@@ -91,7 +96,7 @@ export class ProperteaMap<
           this.set(entry[0], entry[1]);
         }
       }
-      [SetWithDefaults](value?: Iterable<[Key['_T'], Value['_T']]> | MapDiff<Key['_T'], Value['_T']>): void {
+      [SetWithDefaults](value?: MapSettable<Key['_T'], Value['_T']>): void {
         this[ProperteaSet](value)
       }
       clear() {
@@ -110,8 +115,8 @@ export class ProperteaMap<
     interface MapProxy {
       [Diff](): Record<string, any> | undefined
       [MarkClean](): void
-      [ProperteaSet](value?: Iterable<[Key['_T'], Value['_T']]> | MapDiff<Key['_T'], Value['_T']>): void
-      [SetWithDefaults](value?: Iterable<[Key['_T'], Value['_T']]> | MapDiff<Key['_T'], Value['_T']>): void
+      [ProperteaSet](value?: MapSettable<Key['_T'], Value['_T']>): void
+      [SetWithDefaults](value?: MapSettable<Key['_T'], Value['_T']>): void
       [ToJSON](): MapEntry<Key['_T'], Value>[]
       [ToJSONWithoutDefaults](defaults?: any): MapEntry<Key['_T'], Value>[] | undefined
       pool: any

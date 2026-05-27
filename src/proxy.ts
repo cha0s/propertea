@@ -57,8 +57,9 @@ export type HasDirty<O extends ProxyCreatorConfiguration> = (
 
 export abstract class ProxyProperty<
   T extends object,
-  Extension extends object = {}
-> extends Property<T> {
+  Extension extends object = {},
+  Default = Partial<T>,
+> extends Property<T, Default> {
   declare _T: T
   declare _E: Extension
   abstract concrete<O extends ProxyCreatorConfiguration>(

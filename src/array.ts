@@ -16,7 +16,7 @@ import {
   type HasDirty,
 } from './proxy.js';
 import { Property } from './types.ts'
-import type { DeepPartial } from './internal-types.ts';
+import { type DeepPartial } from './internal-types.ts';
 
 const Key = Symbol('Index');
 const ArraySymbol = Symbol('ArraySymbol');

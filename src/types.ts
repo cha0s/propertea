@@ -1,15 +1,14 @@
 import { CrunchesType } from 'crunches'
 
-export abstract class Property<T, Input = T> {
+export abstract class Property<T, Default = T extends object ? Partial<T> : T> {
   declare _T: T
-  declare _Input: Input
 
   byteWidth = 0;
   abstract codec: CrunchesType<unknown>
-  defaultValue: Partial<T> | undefined
+  defaultValue: Default | undefined
   dirtyByteWidth = 1;
 
-  default(value: Partial<T>): this {
+  default(value: Default): this {
     this.defaultValue = value
     return this
   }
