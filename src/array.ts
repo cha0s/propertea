@@ -26,7 +26,7 @@ const nop = () => {};
 type ArrayDiff<T> = Record<string, T>
 
 interface ArrayProxyInterface<T, Stored = T> {
-  dirty: Set<number>
+  dirty: Set<number> | undefined
   pool: any
   [ToJSON](): T[]
   [ToJSONWithoutDefaults](defaults?: any): T[] | undefined
@@ -70,9 +70,11 @@ export class ProperteaArray<
     class ArrayProxy {
 
       $$array: P['_T'][] = []
-      dirty = new Set<number>();
 
       constructor() {
+        if (onDirty) {
+          this.dirty = new Set<number>();
+        }
         this[ProperteaSet](defaultValue);
       }
 
@@ -118,6 +120,7 @@ export class ProperteaArray<
     interface ArrayProxy {
       [Diff](): Record<string, any> | undefined
       [MarkClean](): void
+      dirty: Set<number> | undefined
       pool: any
       setAt(key: number, value: P['_T'] | undefined): void
       setLength(length: number): void
@@ -148,9 +151,7 @@ export class ProperteaArray<
         if (undefined === value && key in this.$$array) {
           pool.free(this.$$array[key]);
         }
-        if (onDirty) {
-          this.dirty.add(key);
-        }
+        this.dirty?.add(key);
         let localValue;
         if (this.$$array[key]) {
           (this.$$array[key] as typeof property['_T'])[ProperteaSet](
@@ -174,58 +175,55 @@ export class ProperteaArray<
       ArrayProxy.prototype.setLength = function(length: number) {
         for (let i = this.$$array.length - 1; i >= length; --i) {
           pool.free(this.$$array[i]);
-          if (onDirty) {
-            this.dirty.add(i);
-          }
+          this.dirty?.add(i);
         }
         this.$$array.length = length;
+      }
+      if (onDirty) {
+        ArrayProxy.prototype[Diff] = function() {
+          const entries: Record<number, any> = {};
+          for (const dirty of this.dirty!) {
+            const v = this.$$array[dirty];
+            // If the value is a proxy property, recursively generate its diff.
+            entries[dirty] = undefined === v ? undefined : v[Diff]();
+          }
+          return entries;
+        };
+        ArrayProxy.prototype[MarkClean] = function() {
+          this.dirty!.clear();
+          for (const value of this.$$array) {
+            value[MarkClean]();
+          }
+        };
       }
     }
     else {
       ArrayProxy.prototype.setLength = function(length: number) {
         for (let i = this.$$array.length - 1; i >= length; --i) {
-          if (onDirty) {
-            this.dirty.add(i);
-          }
+          this.dirty?.add(i);
         }
         this.$$array.length = length;
       }
       ArrayProxy.prototype.setAt = function(key: number, value: P['_T'] | undefined) {
-        if (onDirty) {
-          this.dirty.add(key);
-        }
+        this.dirty?.add(key);
         const previous = this.$$array[key];
         this.$$array[key] = value;
         if (previous !== value) {
           onDirtyCallback(key, this);
         }
       }
-    }
-    if (onDirty) {
-      ArrayProxy.prototype[Diff] = function() {
-        const entries: Record<number, any> = {};
-        if (property instanceof ProxyProperty) {
-          for (const dirty of this.dirty) {
-            const v = this.$$array[dirty];
-            // If the value is a proxy property, recursively generate its diff.
-            entries[dirty] = undefined === v ? undefined : v[Diff]();
-          }
-        }
-        else {
-          for (const dirty of this.dirty) {
+      if (onDirty) {
+        ArrayProxy.prototype[Diff] = function() {
+          const entries: Record<number, any> = {};
+          for (const dirty of this.dirty!) {
             entries[dirty] = this.$$array[dirty];
           }
-        }
-        return entries;
-      };
-      ArrayProxy.prototype[MarkClean] = function() {
-        this.dirty.clear();
-        if (property instanceof ProxyProperty) {
-          for (const value of this.$$array) {
-            value[MarkClean]();
-          }
-        }
-      };
+          return entries;
+        };
+        ArrayProxy.prototype[MarkClean] = function() {
+          this.dirty!.clear();
+        };
+      }
     }
     return (
       this.decorate

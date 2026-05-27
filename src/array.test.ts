@@ -131,14 +131,14 @@ test('reactivity (proxy)', () => {
   expect(dirties).toEqual(4);
 });
 
-test('disabled diff (proxy)', () => {
+test('disabled dirty tracking (proxy)', () => {
   const property = array({
     element: object({ x: uint8() }),
   });
   const Proxy = property.concrete({onDirty: false});
   const proxy = new Proxy(0);
   proxy.setAt(0, {x: 1});
-  expect(proxy.dirty.size).toEqual(0);
+  expect('dirty' in proxy).toEqual(false);
   expect(Diff in proxy).to.equal(false);
 });
 
