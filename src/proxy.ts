@@ -10,8 +10,8 @@ export const ToJSON = Symbol('Propertea.ToJSON');
 export const ToJSONWithoutDefaults = Symbol('Propertea.ToJSONWithoutDefaults');
 
 export interface ProxyClass<T> {
-  [Set](value?: DeepPartial<T>): object
-  [SetWithDefaults](value?: DeepPartial<T>): object
+  [Set](value?: DeepPartial<T>): void
+  [SetWithDefaults](value?: DeepPartial<T>): void
   [ToJSON](): Record<string, any>
   [ToJSONWithoutDefaults](defaults?: DeepPartial<T>): Record<string, any> | undefined
 }
@@ -33,7 +33,7 @@ export type ProxyDataConfiguration = {
   data: DataView
 }
 
-export type ProxyOnDirtyCallback = (bit?: number, proxy?: any) => void
+export type ProxyOnDirtyCallback = (bit: number, proxy?: any) => void
 
 export type ProxyDirtyConfiguration = {
   dirty: Uint8Array
@@ -42,14 +42,23 @@ export type ProxyDirtyConfiguration = {
 
 export type ProxyCreatorConfiguration = Partial<ProxyDirtyConfiguration> & Partial<ProxyDataConfiguration>
 
-export abstract class ProxyProperty<T extends object> extends Property<T> {
+export type HasDirty<O extends ProxyCreatorConfiguration> = (
+  O extends { onDirty: false } ? false : true
+)
+
+export abstract class ProxyProperty<T extends object, E extends object = {}> extends Property<T> {
   declare _T: T
+  declare _E: E
   abstract concrete<O extends ProxyCreatorConfiguration>(
     configuration: O,
     isRoot: boolean,
-  ): ProxyMixedCreator<T, O['dirty'] extends Uint8Array ? true : false>
+  ): ProxyMixedCreator<T & E, HasDirty<O>>
   abstract mapped<O extends ProxyCreatorConfiguration>(
     configuration: O,
     isRoot: boolean,
-  ): ProxyMixedCreator<T, O['dirty'] extends Uint8Array ? true : false>
+  ): ProxyMixedCreator<T & E, HasDirty<O>>
 }
+
+export type ProxyDecorator<T, E extends object> = (
+  C: new (index: number) => T
+) => new (index: number) => T & E

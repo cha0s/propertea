@@ -1,7 +1,8 @@
 import { CrunchesType } from 'crunches'
 
-export abstract class Property<T> {
+export abstract class Property<T, Input = T> {
   declare _T: T
+  declare _Input: Input
 
   byteWidth = 0;
   abstract codec: CrunchesType<unknown>

@@ -1,6 +1,51 @@
 import { object as crunchesObject, type CrunchesType } from 'crunches'
 
+import {
+  Diff,
+  type HasDirty,
+  Instance,
+  MarkClean,
+  type ProxyClass,
+  type ProxyCreatorConfiguration,
+  type ProxyDataConfiguration,
+  type ProxyDecorator,
+  type ProxyDirtyConfiguration,
+  type ProxyMixed,
+  type ProxyMixedCreator,
+  ProxyProperty,
+  Set,
+  SetWithDefaults,
+  ToJSON,
+  ToJSONWithoutDefaults,
+} from './proxy.js';
 import { Property } from './types.ts'
+
+const DataOffset = Symbol('Propertea.object.DataOffset');
+const DirtyOffset = Symbol('Propertea.object.DirtyOffset');
+
+type Props = Record<string, Property<unknown>>
+
+// type InferObjectGetters<P extends Props> = {
+//   get [K in keyof P](): P[K] extends ProxyProperty<any>
+//     ? ProxyMixed<P[K]['_T'], true>
+//     : P[K]['_T']
+// }
+
+// type InferObjectSetters<P extends Props> = {
+//   set [K in keyof P](v: Props[K]['_Input'])
+// }
+
+// type InferObject<P extends Props> = InferObjectGetters<P> & InferObjectSetters<P>
+type InferObject<Props extends Record<string, Property<any>>> = {
+  [K in keyof Props]: Props[K] extends ProxyProperty<any>
+    ? ProxyMixed<Props[K]['_T'], true>
+    : Props[K]['_T']
+}
+// type InferObject<P extends Props> = { [K in keyof P]:  P[K]['_T'] }
+
+function codegen(code: string, context = {}) {
+  return (new Function(Object.keys(context).join(','), code))(...Object.values(context));
+}
 
 export function defineProperty<T extends object, K extends PropertyKey, V>(
   obj: T,
@@ -10,43 +55,24 @@ export function defineProperty<T extends object, K extends PropertyKey, V>(
   Object.defineProperty(obj, key, { value });
 }
 
-import {
-  Diff,
-  Instance,
-  MarkClean,
-  type ProxyClass,
-  type ProxyCreatorConfiguration,
-  type ProxyDataConfiguration,
-  type ProxyDirtyConfiguration,
-  type ProxyMixedCreator,
-  ProxyProperty,
-  Set,
-  SetWithDefaults,
-  ToJSON,
-  ToJSONWithoutDefaults,
-} from './proxy.js';
-
-const DataOffset = Symbol('Propertea.object.DataOffset');
-const DirtyOffset = Symbol('Propertea.object.DirtyOffset');
-
-type Props = Record<string, Property<unknown>>
-
-export type InferObject<P extends Props> = { [K in keyof P]:  P[K]['_T'] }
-
-function codegen(code: string, context = {}) {
-  return (new Function(Object.keys(context).join(','), code))(...Object.values(context));
-}
-
 const nop = () => {};
 
-export class ProperteaObject<P extends Record<string, Property<unknown>>>
-  extends ProxyProperty<InferObject<P>>
+export class ProperteaObject<
+  P extends Record<string, Property<unknown>>,
+  E extends object = {},
+>
+  extends ProxyProperty<InferObject<P>, E>
 {
   codec: ReturnType<typeof crunchesObject>
+  decorate: ProxyDecorator<InferObject<Props>, E> | undefined
   properties: P
 
-  constructor(properties: P) {
+  constructor(
+    properties: P,
+    decorate?: ProxyDecorator<InferObject<Props>, E>,
+  ) {
     super()
+    this.decorate = decorate
     this.properties = {} as P
     const codecProperties: Record<string, CrunchesType<unknown>> = {}
     const byteWidths = [];
@@ -70,9 +96,7 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
   concrete<O extends ProxyCreatorConfiguration>(
     configuration: O = {} as any,
     isRoot = true,
-  ):
-    ProxyMixedCreator<InferObject<P>, O['dirty'] extends Uint8Array ? true : false>
-  {
+  ) {
     const {properties} = this;
     // compute defaults
     const defaults: Record<string, any> = {};
@@ -84,7 +108,7 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
     }
     const Proxy = this.generateProxy({defaults, configuration, isRoot});
     let dirtyIndex = 0;
-    return codegen(
+    const Base = codegen(
       `
         const {[Instance]: symbol = Symbol.for('Propertea.object.root')} = property;
         return class ConcreteProxy extends Proxy {
@@ -128,6 +152,7 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
         Set,
       }
     )
+    return (this.decorate ? this.decorate(Base) : Base) as ProxyMixedCreator<InferObject<P> & E, HasDirty<O>>
   }
   generateProxy<O extends ProxyDirtyConfiguration>({
     defaults,
@@ -177,7 +202,7 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
       [MarkClean](): void
     }
     // dirty API
-    if (configuration.dirty) {
+    if (configuration.onDirty ?? true) {
       ObjectProxy.prototype[Diff] = function() {
         let diff: Record<string, any> | undefined;
         let dirtyOffset = this[DirtyOffset];
@@ -339,9 +364,7 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
   mapped<O extends ProxyCreatorConfiguration>(
     configuration: O = {} as any,
     isRoot = true,
-  ):
-    ProxyMixedCreator<InferObject<P>, O['dirty'] extends Uint8Array ? true : false>
-  {
+  ) {
     const {properties} = this;
     const defaults: Record<string, any> = {};
     // compute defaults
@@ -353,7 +376,7 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
     }
     const Proxy = this.generateProxy({defaults, configuration, isRoot});
     // apply blueprint proxy
-    return codegen(
+    const Base = codegen(
       `
         const {[Instance]: symbol = Symbol.for('Propertea.object.root')} = property;
         return class MappedProxy extends Proxy {
@@ -425,12 +448,14 @@ export class ProperteaObject<P extends Record<string, Property<unknown>>>
         Set,
       }
     )
+    return (this.decorate ? this.decorate(Base) : Base) as ProxyMixedCreator<InferObject<P> & E, HasDirty<O>>
   }
 
 }
 
-export function object<P extends Record<string, Property<unknown>>>(
+export function object<P extends Record<string, Property<unknown>>, E extends object = {}>(
   properties: P,
+  decorate?: ProxyDecorator<InferObject<Props>, E>,
 ) {
-  return new ProperteaObject(properties)
+  return new ProperteaObject(properties, decorate)
 }

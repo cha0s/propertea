@@ -222,3 +222,14 @@ test('default value', () => {
   proxy[SetWithDefaults]();
   expect(proxy[ToJSON]()).toEqual({x: 1, y: 2, z: 3, a: 0});
 });
+
+test('decoration', () => {
+  const property = object(
+    {x: uint8().default(123)},
+    (O) => class extends O { foo() { return 42 }},
+  );
+  const Proxy = property.concrete();
+  const proxy = new Proxy(0);
+  expect(proxy.x).to.equal(123)
+  expect(proxy.foo()).to.equal(42)
+});
