@@ -1,4 +1,3 @@
-import { type DeepPartial } from './internal-types.ts';
 import { Property } from './types.ts';
 
 export const Diff = Symbol('Propertea.Diff');
@@ -9,16 +8,21 @@ export const SetWithDefaults = Symbol('Propertea.SetWithDefaults');
 export const ToJSON = Symbol('Propertea.ToJSON');
 export const ToJSONWithoutDefaults = Symbol('Propertea.ToJSONWithoutDefaults');
 
-export interface ProxyClass<T> {
-  [Set](value?: DeepPartial<T>): void
-  [SetWithDefaults](value?: DeepPartial<T>): void
+export interface ProxyClass {
+  [Set](value?: never): void
+  [SetWithDefaults](value?: never): void
   [ToJSON](): Record<string, any>
-  [ToJSONWithoutDefaults](defaults?: DeepPartial<T>): Record<string, any> | undefined
+  [ToJSONWithoutDefaults](defaults?: never): Record<string, any> | undefined
 }
 
-export type ProxyMixed<T, O> = (
-  ProxyClass<T> & T & (
-    O extends true
+export type ProxyMixed<
+  T,
+  HasDirty,
+> = (
+  & ProxyClass
+  & T
+  & (
+    HasDirty extends true
       ? {
         [Diff](): Record<string, any> | undefined
         [MarkClean](): void
@@ -27,7 +31,12 @@ export type ProxyMixed<T, O> = (
   )
 )
 
-export type ProxyMixedCreator<T, O> = new (dataIndex: number) => ProxyMixed<T, O>
+export type ProxyMixedCreator<
+  T,
+  HasDirty,
+> = (
+  new (dataIndex: number) => ProxyMixed<T, HasDirty>
+)
 
 export type ProxyDataConfiguration = {
   data: DataView
@@ -46,17 +55,20 @@ export type HasDirty<O extends ProxyCreatorConfiguration> = (
   O extends { onDirty: false } ? false : true
 )
 
-export abstract class ProxyProperty<T extends object, E extends object = {}> extends Property<T> {
+export abstract class ProxyProperty<
+  T extends object,
+  Extension extends object = {}
+> extends Property<T> {
   declare _T: T
-  declare _E: E
+  declare _E: Extension
   abstract concrete<O extends ProxyCreatorConfiguration>(
     configuration: O,
     isRoot: boolean,
-  ): ProxyMixedCreator<T & E, HasDirty<O>>
+  ): ProxyMixedCreator<T & Extension, HasDirty<O>>
   abstract mapped<O extends ProxyCreatorConfiguration>(
     configuration: O,
     isRoot: boolean,
-  ): ProxyMixedCreator<T & E, HasDirty<O>>
+  ): ProxyMixedCreator<T & Extension, HasDirty<O>>
 }
 
 export type ProxyDecorator<T, E extends object> = (

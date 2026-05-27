@@ -5,7 +5,6 @@ import {
   type HasDirty,
   Instance,
   MarkClean,
-  type ProxyClass,
   type ProxyCreatorConfiguration,
   type ProxyDataConfiguration,
   type ProxyDecorator,
@@ -19,6 +18,7 @@ import {
   ToJSONWithoutDefaults,
 } from './proxy.js';
 import { Property } from './types.ts'
+import type { DeepPartial } from './internal-types.ts';
 
 const DataOffset = Symbol('Propertea.object.DataOffset');
 const DirtyOffset = Symbol('Propertea.object.DirtyOffset');
@@ -140,7 +140,11 @@ export class ProperteaObject<
         Set,
       }
     )
-    return (this.decorate ? this.decorate(Base) : Base) as ProxyMixedCreator<InferObject<P> & E, HasDirty<O>>
+    return (
+      this.decorate
+        ? this.decorate(Base)
+        : Base
+    ) as ProxyMixedCreator<InferObject<P> & typeof Proxy & E, HasDirty<O>>
   }
   generateProxy<O extends ProxyDirtyConfiguration>({
     defaults,
@@ -150,7 +154,7 @@ export class ProperteaObject<
     defaults: Record<string, any>,
     configuration: Partial<ProxyDataConfiguration> & Partial<O>,
     isRoot: boolean,
-  }): ProxyClass<InferObject<P>> {
+  }) {
     const { properties } = this;
     // proxy API
     class ObjectProxy {
@@ -188,6 +192,8 @@ export class ProperteaObject<
       [Diff](): Record<string, any> | undefined
       [DirtyOffset]: number
       [MarkClean](): void
+      [Set](value?: DeepPartial<InferObject<P>>): void
+      [SetWithDefaults](value?: DeepPartial<InferObject<P>>): void
     }
     // dirty API
     if (configuration.onDirty ?? true) {
@@ -346,7 +352,7 @@ export class ProperteaObject<
       ObjectProxy,
       Set,
       SetWithDefaults,
-    });
+    }) as ObjectProxy;
   }
 
   mapped<O extends ProxyCreatorConfiguration>(

@@ -38,23 +38,26 @@ interface ArrayProxyInterface<T, Stored = T> {
 }
 
 export class ProperteaArray<
-  P extends Property<unknown>,
-  E extends object = {},
-  Stored = P extends ProxyProperty<any> ? ProxyMixed<P['_T'], true> : P['_T'],
+  Element extends Property<unknown>,
+  Extension extends object = {},
+  Stored = Element extends ProxyProperty<any> ? ProxyMixed<Element['_T'], true> : Element['_T'],
 >
-  extends ProxyProperty<ArrayProxyInterface<P['_T'], Stored>, Iterable<P['_T']> | ArrayDiff<P['_T']>>
+  extends ProxyProperty<
+    ArrayProxyInterface<Element['_T'], Stored>,
+    Extension
+  >
 {
   codec: ReturnType<typeof crunchesArray>
-  decorate: ProxyDecorator<ArrayProxyInterface<P['_T'], Stored>, E> | undefined
-  property: P
+  decorate: ProxyDecorator<ArrayProxyInterface<Element['_T'], Stored>, Extension> | undefined
+  element: Element
 
   constructor(
-    { element, length = 0 }: { element: P; length?: number },
-    decorate?: ProxyDecorator<ArrayProxyInterface<P['_T'], Stored>, E>,
+    { element, length = 0 }: { element: Element; length?: number },
+    decorate?: ProxyDecorator<ArrayProxyInterface<Element['_T'], Stored>, Extension>,
   ) {
     super();
     this.decorate = decorate
-    this.property = element
+    this.element = element
     this.codec = crunchesArray({ element: element.codec, length })
   }
 
@@ -62,14 +65,14 @@ export class ProperteaArray<
     configuration: O = {} as any,
     isRoot = true,
   ) {
-    const { defaultValue, property } = this;
-    const { dirtyByteWidth } = property;
+    const { defaultValue, element } = this;
+    const { dirtyByteWidth } = element;
     const onDirty = configuration.onDirty ?? true;
     const onDirtyCallback = 'function' === typeof onDirty ? onDirty : nop;
 
     class ArrayProxy {
 
-      $$array: P['_T'][] = []
+      $$array: Element['_T'][] = []
 
       constructor() {
         if (onDirty) {
@@ -78,7 +81,7 @@ export class ProperteaArray<
         this[ProperteaSet](defaultValue);
       }
 
-      [ProperteaSet](value?: Iterable<P['_T']> | ArrayDiff<P['_T']>): void {
+      [ProperteaSet](value?: Iterable<Element['_T']> | ArrayDiff<Element['_T']>): void {
         if (!value || 'object' !== typeof value) {
           return;
         }
@@ -96,19 +99,11 @@ export class ProperteaArray<
         }
       }
 
-      [SetWithDefaults](value?: Iterable<P['_T']> | ArrayDiff<P['_T']>): void {
+      [SetWithDefaults](value?: Iterable<Element['_T']> | ArrayDiff<Element['_T']>): void {
         this[ProperteaSet](value)
       }
 
-      [ToJSON](): P['_T'][] {
-        const json = [];
-        for (const value of this.$$array) {
-          json.push(property instanceof ProxyProperty ? (value as typeof property['_T'])[ToJSON]() : value);
-        }
-        return json;
-      }
-
-      [ToJSONWithoutDefaults](_defaults?: any): P['_T'][] | undefined {
+      [ToJSONWithoutDefaults](_defaults?: any): Element['_T'][] | undefined {
         return this[ToJSON]()
       }
 
@@ -120,19 +115,20 @@ export class ProperteaArray<
     interface ArrayProxy {
       [Diff](): Record<string, any> | undefined
       [MarkClean](): void
+      [ToJSON](): Element['_T'][]
       dirty: Set<number> | undefined
       pool: any
-      setAt(key: number, value: P['_T'] | undefined): void
+      setAt(key: number, value: Element['_T'] | undefined): void
       setLength(length: number): void
     }
 
-    if (property instanceof ProxyProperty) {
-      const Concrete = class extends property.concrete(configuration, isRoot) {
+    if (element instanceof ProxyProperty) {
+      const Concrete = class extends element.concrete(configuration, isRoot) {
         [Key]: number | undefined = undefined;
         [ArraySymbol]: ArrayProxy | undefined = undefined;
       }
       const pool = new Pool(
-        property,
+        element,
         onDirty ? {
           onDirty: (bit, proxy) => {
             onDirtyCallback(bit, proxy);
@@ -147,16 +143,16 @@ export class ProperteaArray<
         } : undefined,
       );
       ArrayProxy.prototype.pool = pool
-      ArrayProxy.prototype.setAt = function(key: number, value: DeepPartial<P['_T']> | undefined) {
+      ArrayProxy.prototype.setAt = function(key: number, value: DeepPartial<Element['_T']> | undefined) {
         if (undefined === value && key in this.$$array) {
           pool.free(this.$$array[key]);
         }
         this.dirty?.add(key);
         let localValue;
         if (this.$$array[key]) {
-          (this.$$array[key] as typeof property['_T'])[ProperteaSet](
+          (this.$$array[key] as typeof element['_T'])[ProperteaSet](
             value instanceof Concrete
-              ? (value as typeof property['_T'])[ToJSON]()
+              ? (value as typeof element['_T'])[ToJSON]()
               : value
           );
           localValue = this.$$array[key];
@@ -195,6 +191,13 @@ export class ProperteaArray<
             value[MarkClean]();
           }
         };
+        ArrayProxy.prototype[ToJSON] = function(): Element['_T'][] {
+          const json = [];
+          for (const value of this.$$array) {
+            json.push((value as typeof element['_T'])[ToJSON]());
+          }
+          return json;
+        }
       }
     }
     else {
@@ -204,7 +207,7 @@ export class ProperteaArray<
         }
         this.$$array.length = length;
       }
-      ArrayProxy.prototype.setAt = function(key: number, value: P['_T'] | undefined) {
+      ArrayProxy.prototype.setAt = function(key: number, value: Element['_T'] | undefined) {
         this.dirty?.add(key);
         const previous = this.$$array[key];
         this.$$array[key] = value;
@@ -223,13 +226,23 @@ export class ProperteaArray<
         ArrayProxy.prototype[MarkClean] = function() {
           this.dirty!.clear();
         };
+        ArrayProxy.prototype[ToJSON] = function(): Element['_T'][] {
+          const json = [];
+          for (const value of this.$$array) {
+            json.push(value);
+          }
+          return json;
+        }
       }
     }
     return (
       this.decorate
-        ? this.decorate(ArrayProxy as unknown as new (index: number) => ArrayProxyInterface<P['_T'], Stored>)
+        ? this.decorate(ArrayProxy as unknown as new (index: number) => ArrayProxyInterface<Element['_T'], Stored>)
         : ArrayProxy
-      ) as ProxyMixedCreator<ArrayProxyInterface<P['_T'], Stored> & E, HasDirty<O>>
+      ) as ProxyMixedCreator<
+        ArrayProxyInterface<Element['_T'], Stored> & Extension,
+        HasDirty<O>
+      >
   }
 
   mapped<O extends ProxyCreatorConfiguration>(

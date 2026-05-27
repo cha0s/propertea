@@ -67,7 +67,7 @@ test('within', () => {
   expect(proxy[Diff]()).toEqual({x: {1: 3}});
 });
 
-test('set partial', () => {
+test('set diff', () => {
   const property = array({
     element: uint8(),
   });
