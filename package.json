@@ -4,9 +4,9 @@
     "crunches": "^3.0.1"
   },
   "devDependencies": {
-    "@microsoft/api-extractor": "^7.58.7",
     "@types/node": "^25.6.0",
     "@vitest/coverage-v8": "^4.1.4",
+    "dts-bundle-generator": "^9.5.1",
     "tsx": "^4.22.3",
     "typescript": "~6.0.2",
     "vite": "^8.0.4",
@@ -30,9 +30,8 @@
     "url": "git+https://github.com/cha0s/propertea.git"
   },
   "scripts": {
-    "benchmark": "npx tsx benchmark/run.ts",
     "build": "vite build && tsc && dts-bundle-generator --out-file dist/index.d.ts src/index.ts",
-    "test": "vitest src"
+    "test": "vitest"
   },
   "sideEffects": false,
   "type": "module",

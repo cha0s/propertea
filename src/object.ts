@@ -23,9 +23,9 @@ import type { DeepPartial } from './internal-types.ts';
 const DataOffset = Symbol('Propertea.object.DataOffset');
 const DirtyOffset = Symbol('Propertea.object.DirtyOffset');
 
-type Props = Record<string, Property<unknown>>
+export type ProperteaObjectProps = Record<string, Property<unknown>>
 
-type InferObject<Props extends Record<string, Property<any>>> = {
+export type ProperteaObjectShape<Props extends Record<string, Property<any>>> = {
   [K in keyof Props]: Props[K] extends ProxyProperty<any>
     ? ProxyMixed<Props[K]['_T'], true>
     : Props[K]['_T']
@@ -46,18 +46,18 @@ export function defineProperty<T extends object, K extends PropertyKey, V>(
 const nop = () => {};
 
 export class ProperteaObject<
-  P extends Record<string, Property<unknown>>,
+  P extends ProperteaObjectProps,
   E extends object = {},
 >
-  extends ProxyProperty<InferObject<P>, E>
+  extends ProxyProperty<ProperteaObjectShape<P>, E>
 {
   codec: ReturnType<typeof crunchesObject>
-  decorate: ProxyDecorator<InferObject<Props>, E> | undefined
+  decorate: ProxyDecorator<ProperteaObjectShape<ProperteaObjectProps>, E> | undefined
   properties: P
 
   constructor(
     properties: P,
-    decorate?: ProxyDecorator<InferObject<Props>, E>,
+    decorate?: ProxyDecorator<ProperteaObjectShape<ProperteaObjectProps>, E>,
   ) {
     super()
     this.decorate = decorate
@@ -144,7 +144,7 @@ export class ProperteaObject<
       this.decorate
         ? this.decorate(Base)
         : Base
-    ) as ProxyMixedCreator<InferObject<P> & typeof Proxy & E, HasDirty<O>>
+    ) as ProxyMixedCreator<ProperteaObjectShape<P> & typeof Proxy & E, HasDirty<O>>
   }
   generateProxy<O extends ProxyDirtyConfiguration>({
     defaults,
@@ -192,8 +192,8 @@ export class ProperteaObject<
       [Diff](): Record<string, any> | undefined
       [DirtyOffset]: number
       [MarkClean](): void
-      [Set](value?: DeepPartial<InferObject<P>>): void
-      [SetWithDefaults](value?: DeepPartial<InferObject<P>>): void
+      [Set](value?: DeepPartial<ProperteaObjectShape<P>>): void
+      [SetWithDefaults](value?: DeepPartial<ProperteaObjectShape<P>>): void
     }
     // dirty API
     if (configuration.onDirty ?? true) {
@@ -442,14 +442,14 @@ export class ProperteaObject<
         Set,
       }
     )
-    return (this.decorate ? this.decorate(Base) : Base) as ProxyMixedCreator<InferObject<P> & E, HasDirty<O>>
+    return (this.decorate ? this.decorate(Base) : Base) as ProxyMixedCreator<ProperteaObjectShape<P> & E, HasDirty<O>>
   }
 
 }
 
 export function object<P extends Record<string, Property<unknown>>, E extends object = {}>(
   properties: P,
-  decorate?: ProxyDecorator<InferObject<Props>, E>,
+  decorate?: ProxyDecorator<ProperteaObjectShape<ProperteaObjectProps>, E>,
 ) {
   return new ProperteaObject(properties, decorate)
 }
