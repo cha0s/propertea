@@ -22,7 +22,7 @@ interface WasmTestExports extends Record<string, any> {
   thisIsAWasmTest: (arg: number) => void
 }
 
-const exports = await WebAssembly.instantiate(buffer, {pool: pool.imports()})
+const exports = await WebAssembly.instantiate(buffer, {pool: pool.wasmImports()})
   .then(({instance: {exports}}) => exports as WasmTestExports);
 
 function create() {

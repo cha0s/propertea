@@ -112,10 +112,7 @@ export class Pool<
     return proxy;
   }
 
-  /**
-   * Returns the imports for the pool.
-   */
-  imports() {
+  wasmImports() {
     return {
       data: this.data.memory,
       dirty: this.dirty.memory,

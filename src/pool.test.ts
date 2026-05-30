@@ -128,7 +128,7 @@ test('wasm', async () => {
   }
   pool.markClean();
   const {default: buffer} = await import('./pool.test.wat?multi_memory');
-  const exports = await WebAssembly.instantiate(buffer, {pool: pool.imports()})
+  const exports = await WebAssembly.instantiate(buffer, {pool: pool.wasmImports()})
     .then(({instance: {exports}}) => exports as WasmTestExports);
   const parameter = Math.random();
   exports.thisIsAWasmTest(parameter);
