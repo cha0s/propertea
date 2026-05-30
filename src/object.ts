@@ -47,17 +47,17 @@ const nop = () => {};
 
 export class ProperteaObject<
   P extends ProperteaObjectProps,
-  E extends object = {},
+  Decorator extends object = {},
 >
-  extends ProxyProperty<ProperteaObjectShape<P>, E>
+  extends ProxyProperty<ProperteaObjectShape<P>, Decorator>
 {
   codec: ReturnType<typeof crunchesObject>
-  decorate: ProxyDecorator<ProperteaObjectShape<ProperteaObjectProps>, E> | undefined
+  decorate: ProxyDecorator<ProperteaObjectShape<ProperteaObjectProps>, Decorator> | undefined
   properties: P
 
   constructor(
     properties: P,
-    decorate?: ProxyDecorator<ProperteaObjectShape<ProperteaObjectProps>, E>,
+    decorate?: ProxyDecorator<ProperteaObjectShape<ProperteaObjectProps>, Decorator>,
   ) {
     super()
     this.decorate = decorate
@@ -144,7 +144,7 @@ export class ProperteaObject<
       this.decorate
         ? this.decorate(Base)
         : Base
-    ) as ProxyMixedCreator<ProperteaObjectShape<P> & typeof Proxy & E, HasDirty<O>>
+    ) as ProxyMixedCreator<ProperteaObjectShape<P> & typeof Proxy & Decorator, HasDirty<O>>
   }
   generateProxy<O extends ProxyDirtyConfiguration>({
     defaults,
@@ -442,14 +442,17 @@ export class ProperteaObject<
         Set,
       }
     )
-    return (this.decorate ? this.decorate(Base) : Base) as ProxyMixedCreator<ProperteaObjectShape<P> & E, HasDirty<O>>
+    return (this.decorate ? this.decorate(Base) : Base) as ProxyMixedCreator<ProperteaObjectShape<P> & Decorator, HasDirty<O>>
   }
 
 }
 
-export function object<P extends Record<string, Property<unknown>>, E extends object = {}>(
+export function object<
+  P extends ProperteaObjectProps,
+  Decorator extends object = {},
+>(
   properties: P,
-  decorate?: ProxyDecorator<ProperteaObjectShape<ProperteaObjectProps>, E>,
+  decorate?: ProxyDecorator<ProperteaObjectShape<ProperteaObjectProps>, Decorator>,
 ) {
   return new ProperteaObject(properties, decorate)
 }

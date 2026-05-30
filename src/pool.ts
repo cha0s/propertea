@@ -48,7 +48,7 @@ export class Pool<
     dirty: undefined as any,
   };
 
-  ProxyCreator: ProxyMixedCreator<(Prop['_T']), HasDirty>
+  ProxyCreator: ProxyMixedCreator<Prop['_T'] & Prop['_E'], HasDirty>
 
   constructor(
     property: Prop,
@@ -72,13 +72,13 @@ export class Pool<
         super(index);
         this[Index] = index;
       }
-    } as unknown as ProxyMixedCreator<Prop['_T'], HasDirty>
+    } as unknown as ProxyMixedCreator<Prop['_T'] & Prop['_E'], HasDirty>
   }
 
   allocate<E extends object = {}>(
     value?: DeepPartial<Prop['_T']>,
     initialize?: (_: PoolProxyMixed<Prop, HasDirty> & E) => void,
-  ): PoolProxyMixed<Prop, HasDirty> & E {
+  ): PoolProxyMixed<Prop, HasDirty> & Prop['_E'] & E {
     let proxy: (ProxyMixed<Prop['_T'], HasDirty> & { [Index]: number });
     // free instance? use it
     if (this.freeList.length > 0) {

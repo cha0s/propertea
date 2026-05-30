@@ -103,13 +103,14 @@ test('no dirty tracking', () => {
   expect(() => { first.z = 12; }).not.toThrow();
 });
 
-test('allocate augmentation', () => {
+test('allocation augmentation', () => {
   const pool = new Pool(object({
     z: uint8().default(123),
     a: uint8().default(234),
-  }));
+  }, (O) => class extends O { bar() { return 'bar' }}));
   const first = pool.allocate<{foo: number}>({}, (proxy) => { proxy.foo = 12; });
   expect(first.foo).toEqual(12);
+  expect(first.bar()).toEqual('bar');
 });
 
 interface WasmTestExports extends Record<string, any> {
