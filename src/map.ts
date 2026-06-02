@@ -70,7 +70,6 @@ export class ProperteaMap<
     this.codec = crunchesMap({ key: key.codec, value: value.codec })
   }
 
-
   concrete<O extends ProxyCreatorConfiguration>(
     configuration: O = {} as any,
     isRoot = true,

@@ -180,7 +180,7 @@ export class ProperteaArray<
           const entries: Record<number, any> = {};
           for (const dirty of this.dirty!) {
             const v = this.$$array[dirty];
-            // If the value is a proxy property, recursively generate its diff.
+            // recursively generate diff
             entries[dirty] = undefined === v ? undefined : v[Diff]();
           }
           return entries;

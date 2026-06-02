@@ -134,7 +134,9 @@ export class ProperteaObject<
         configuration,
         DirtyOffset,
         Instance,
-        onDirtyCallback: 'function' === typeof configuration.onDirty ? configuration.onDirty : nop,
+        onDirtyCallback: 'function' === typeof configuration.onDirty
+          ? configuration.onDirty
+          : nop,
         property: this,
         Proxy,
         Set,
@@ -162,10 +164,10 @@ export class ProperteaObject<
         const json: Record<string, any> = {};
         for (const key in properties) {
           if (properties[key] instanceof ProxyProperty) {
-            json[key] = (this as Record<string, any>)[key][ToJSON]();
+            json[key] = (this as any)[key][ToJSON]();
           }
           else {
-            json[key] = (this as Record<string, any>)[key];
+            json[key] = (this as any)[key];
           }
         }
         return json;
@@ -175,10 +177,10 @@ export class ProperteaObject<
         for (const key in properties) {
           let keyJson;
           if (properties[key] instanceof ProxyProperty) {
-            keyJson = (this as Record<string, any>)[key][ToJSONWithoutDefaults](defaults?.[key]);
+            keyJson = (this as any)[key][ToJSONWithoutDefaults](defaults?.[key]);
           }
-          else if ((defaults?.[key] ?? properties[key].defaultValue) !== (this as Record<string, any>)[key]) {
-            keyJson = (this as Record<string, any>)[key];
+          else if ((defaults?.[key] ?? properties[key].defaultValue) !== (this as any)[key]) {
+            keyJson = (this as any)[key];
           }
           if (undefined !== keyJson) {
             json ??= {};
@@ -205,11 +207,11 @@ export class ProperteaObject<
           let keyDiff;
           // recur
           if (property instanceof ProxyProperty) {
-            keyDiff = (this as Record<string, any>)[key][Diff]();
+            keyDiff = (this as any)[key][Diff]();
           }
           // check dirty bit
           else if (configuration.dirty![dirtyOffset >> 3] & (1 << (dirtyOffset & 7))) {
-            keyDiff = (this as Record<string, any>)[key];
+            keyDiff = (this as any)[key];
           }
           if (undefined !== keyDiff) {
             diff ??= {};
@@ -224,7 +226,7 @@ export class ProperteaObject<
         for (const key in properties) {
           const property = properties[key];
           if (property instanceof ProxyProperty) {
-            (this as Record<string, any>)[key][MarkClean]();
+            (this as any)[key][MarkClean]();
           }
           else if (configuration.dirty) {
             configuration.dirty[bit >> 3] &= ~(1 << (bit & 7));
@@ -252,10 +254,26 @@ export class ProperteaObject<
                 .map(([key]) => `'${key}': undefined`).join(',')
             }
           };
-          let dataOffset = ${configuration.data ? (isRoot ? 'dataIndex * byteWidth' : 'dataIndex') : 0};
-          let dirtyOffset = ${configuration.dirty ? (isRoot ? 'dataIndex * dirtyByteWidth' : 'dirtyIndex') : 0};
-          ${configuration.data ? 'this[DataOffset] = dataOffset;' : ''}
-          ${configuration.dirty ? 'this[DirtyOffset] = dirtyOffset;' : ''}
+          let dataOffset = ${
+            configuration.data
+              ? (isRoot ? 'dataIndex * byteWidth' : 'dataIndex')
+              : 0
+          };
+          let dirtyOffset = ${
+            configuration.dirty
+              ? (isRoot ? 'dataIndex * dirtyByteWidth' : 'dirtyIndex')
+              : 0
+          };
+          ${
+            configuration.data
+              ? 'this[DataOffset] = dataOffset;'
+              : ''
+            }
+          ${
+            configuration.dirty
+              ? 'this[DirtyOffset] = dirtyOffset;'
+              : ''
+            }
           ${
             // constant key access
             Object.keys(defaults)
@@ -270,8 +288,16 @@ export class ProperteaObject<
                       : 'this[key] = defaults[key]'
                   }
                   ${''/* increment offsets */}
-                  ${(hasProxies && configuration.data) ? `dataOffset += properties[key].byteWidth;` : ''}
-                  ${(hasProxies && configuration.dirty) ? `dirtyOffset += properties[key].dirtyByteWidth;` : ''}
+                  ${
+                    (hasProxies && configuration.data)
+                      ? `dataOffset += properties[key].byteWidth;`
+                      : ''
+                  }
+                  ${
+                    (hasProxies && configuration.dirty)
+                      ? `dirtyOffset += properties[key].dirtyByteWidth;`
+                      : ''
+                  }
                 }`;
               }).join('\n')
           }
@@ -346,7 +372,9 @@ export class ProperteaObject<
       defaults,
       DirtyOffset,
       Instance,
-      onDirtyCallback: 'function' === typeof configuration.onDirty ? configuration.onDirty : nop,
+      onDirtyCallback: 'function' === typeof configuration.onDirty
+        ? configuration.onDirty
+        : nop,
       properties,
       property: this,
       ObjectProxy,
@@ -435,14 +463,20 @@ export class ProperteaObject<
         DataOffset,
         DirtyOffset,
         Instance,
-        onDirtyCallback: 'function' === typeof configuration.onDirty ? configuration.onDirty : nop,
+        onDirtyCallback: 'function' === typeof configuration.onDirty
+          ? configuration.onDirty
+          : nop,
         properties,
         property: this,
         Proxy,
         Set,
       }
     )
-    return (this.decorate ? this.decorate(Base) : Base) as ProxyMixedCreator<ProperteaObjectShape<P> & Decorator, HasDirty<O>>
+    return (
+      this.decorate
+        ? this.decorate(Base)
+        : Base
+    ) as ProxyMixedCreator<ProperteaObjectShape<P> & Decorator, HasDirty<O>>
   }
 
 }
