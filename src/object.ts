@@ -51,6 +51,7 @@ export class ProperteaObject<
 >
   extends ProxyProperty<ProperteaObjectShape<P>, Decorator>
 {
+
   codec: ReturnType<typeof crunchesObject>
   decorate: ProxyDecorator<ProperteaObjectShape<ProperteaObjectProps>, Decorator> | undefined
   properties: P

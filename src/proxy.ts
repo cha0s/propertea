@@ -60,16 +60,20 @@ export abstract class ProxyProperty<
   Extension extends object = {},
   Default = Partial<T>,
 > extends Propertea<T, Default> {
+
   declare _T: T
   declare _E: Extension
+
   abstract concrete<O extends ProxyCreatorConfiguration>(
     configuration: O,
     isRoot: boolean,
   ): ProxyMixedCreator<T & Extension, HasDirty<O>>
+
   abstract mapped<O extends ProxyCreatorConfiguration>(
     configuration: O,
     isRoot: boolean,
   ): ProxyMixedCreator<T & Extension, HasDirty<O>>
+
 }
 
 export type ProxyDecorator<T, E extends object> = (

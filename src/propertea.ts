@@ -1,6 +1,7 @@
 import { CrunchesType } from 'crunches'
 
 export abstract class Propertea<T, Default = T extends object ? Partial<T> : T> {
+
   declare _T: T
 
   byteWidth = 0;
@@ -16,4 +17,5 @@ export abstract class Propertea<T, Default = T extends object ? Partial<T> : T> 
   get isMappable() {
     return this.byteWidth > 0;
   }
+
 }

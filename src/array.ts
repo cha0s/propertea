@@ -26,15 +26,19 @@ const nop = () => {};
 type ArrayDiff<T> = Record<string, T>
 
 interface ArrayProxyInterface<T, Stored = T> {
+
   dirty: Set<number> | undefined
   pool: any
-  [ToJSON](): T[]
-  [ToJSONWithoutDefaults](defaults?: any): T[] | undefined
+
   [ProperteaSet](value?: Iterable<T> | ArrayDiff<T>): void
   [SetWithDefaults](value?: Iterable<T> | ArrayDiff<T>): void
+  [ToJSON](): T[]
+  [ToJSONWithoutDefaults](defaults?: any): T[] | undefined
+
   at(key: number): Stored | undefined
   setAt(key: number, value: T | undefined): void
   setLength(length: number): void
+
 }
 
 export class ProperteaArray<
@@ -47,6 +51,7 @@ export class ProperteaArray<
     Extension
   >
 {
+
   codec: ReturnType<typeof crunchesArray>
   decorate: ProxyDecorator<ArrayProxyInterface<Element['_T'], Stored>, Extension> | undefined
   element: Element
