@@ -114,10 +114,10 @@ export class Pool<
 
   wasmImports() {
     return {
-      byteWidth: new WebAssembly.Global({value: 'i32'}, this.property.byteWidth),
+      byte_width: new WebAssembly.Global({value: 'i32'}, this.property.byteWidth),
       data: this.data.memory,
       dirty: this.dirty.memory,
-      dirtyByteWidth: new WebAssembly.Global({value: 'i32'}, this.property.dirtyByteWidth),
+      dirty_byte_width: new WebAssembly.Global({value: 'i32'}, this.property.dirtyByteWidth),
       length: this.length,
     }
   }
