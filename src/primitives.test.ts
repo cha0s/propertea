@@ -44,7 +44,10 @@ test('boolean', () => {
       y: propertea(),
     });
     const data = new elementClass(2);
-    const Proxy = property.mapped({data: new DataView(data.buffer)});
+    const Proxy = property.mapped({
+      data: new DataView(data.buffer),
+      dirty: new Uint8Array(1),
+    });
     const proxy = new Proxy(0);
     proxy.x = 1;
     proxy.y = 2;
@@ -67,7 +70,10 @@ test('boolean', () => {
       y: propertea(),
     });
     const data = new elementClass(2);
-    const Proxy = property.mapped({data: new DataView(data.buffer)});
+    const Proxy = property.mapped({
+      data: new DataView(data.buffer),
+      dirty: new Uint8Array(1),
+    });
     const proxy = new Proxy(0);
     proxy.x = 1n;
     proxy.y = 2n;

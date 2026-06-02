@@ -10,7 +10,7 @@ test('primitive', () => {
     key: uint8(),
     value: uint8(),
   });
-  const Map = property.concrete();
+  const Map = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Map(0);
   proxy.set(0, 3);
   expect(proxy.get(0)).toEqual(3);
@@ -21,7 +21,7 @@ test('proxy', () => {
     key: uint8(),
     value: object({ x: uint8() }),
   });
-  const Map = property.concrete();
+  const Map = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Map(0);
   const value = {x: 3};
   proxy.set(0, value);
@@ -34,7 +34,7 @@ test('ToJSON', () => {
     key: uint8(),
     value: object({ x: uint8() }),
   });
-  const Map = property.concrete();
+  const Map = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Map(0);
   const value = {x: 3};
   proxy.set(0, value);
@@ -49,7 +49,7 @@ test('nested', () => {
       value: object({ x: uint8() }),
     }),
   });
-  const Map = property.concrete();
+  const Map = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Map(0);
   proxy.set(0, [[0, {x: 3}]] as any);
   expect(proxy[ToJSON]()).toEqual([[0, [[0, {x: 3}]]]]);
@@ -58,7 +58,7 @@ test('nested', () => {
   const Map2 = map({
     key: uint8(),
     value: object({ x: uint8() }),
-  }).concrete();
+  }).concrete({ dirty: new Uint8Array(1) });
   const proxy2 = new Map2(0);
   proxy2.set(0, {x: 5});
   proxy.set(0, proxy2);
@@ -70,7 +70,9 @@ test('dirty', () => {
     key: uint8(),
     value: object({ x: uint8() }),
   });
-  const Map = property.concrete({onDirty: true});
+  const Map = property.concrete({
+    dirty: new Uint8Array(1),
+  });
   const proxy = new Map(0);
   const value = {x: 3};
   proxy.set(0, value);

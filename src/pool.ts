@@ -5,24 +5,23 @@ import {
   SetWithDefaults,
   type ProxyMixed,
   type ProxyMixedCreator,
-  type ProxyCreatorConfiguration,
   type ProxyOnDirtyCallback,
 } from './proxy.ts';
 
 export const Index = Symbol('Index');
 
-type PoolProxyMixed<Prop extends ProxyProperty<any>, HasDirty extends boolean> = (
-  ProxyMixed<Prop['_T'], HasDirty> & { [Index]: number }
+type PoolProxyMixed<Prop extends ProxyProperty<any>> = (
+  ProxyMixed<Prop['_T']> & { [Index]: number }
 )
 
-type PoolViews<HasDirty extends boolean> = (
-  ProxyCreatorConfiguration
-  & (HasDirty extends true ? { dirty: Uint8Array } : {})
-)
+type PoolViews = {
+  data: DataView
+  dirty: Uint8Array
+  onDirty?: ProxyOnDirtyCallback
+}
 
 export class Pool<
   Prop extends ProxyProperty<any>,
-  HasDirty extends boolean = true,
 > {
 
   data = {
@@ -35,36 +34,33 @@ export class Pool<
     nextGrow: 0,
   };
 
-  freeList: (PoolProxyMixed<Prop, HasDirty>)[] = [];
+  freeList: (PoolProxyMixed<Prop>)[] = [];
 
   length = new WebAssembly.Global({mutable: true, value: 'i32'}, 0);
 
   property: Prop
 
-  proxies: (PoolProxyMixed<Prop, HasDirty> | null)[] = [];
+  proxies: (PoolProxyMixed<Prop> | null)[] = [];
 
-  views: PoolViews<HasDirty> = {
+  views: PoolViews = {
     data: new DataView(new ArrayBuffer(0)),
-    dirty: undefined as any,
+    dirty: new Uint8Array(1),
   };
 
-  ProxyCreator: ProxyMixedCreator<Prop['_T'] & Prop['_E'], HasDirty>
+  ProxyCreator: ProxyMixedCreator<Prop['_T'] & Prop['_E']>
 
   constructor(
     property: Prop,
     params?: {
-      onDirty?: HasDirty extends true ? true | ProxyOnDirtyCallback : HasDirty
+      onDirty?: ProxyOnDirtyCallback
     }
   ) {
     if (!(property instanceof ProxyProperty)) {
       throw new TypeError(`Propertea(pool): not a proxy property`);
     }
+    const {onDirty} = params ?? {};
     this.property = property;
-    const {onDirty = true} = params ?? {};
-    if (onDirty) {
-      this.views.dirty = new Uint8Array(0);
-      this.views.onDirty = onDirty;
-    }
+    this.views.onDirty = onDirty;
     const method = property.isMappable ? 'mapped' : 'concrete'
     this.ProxyCreator = class extends property[method](this.views, true) {
       [Index]: number
@@ -72,14 +68,14 @@ export class Pool<
         super(index);
         this[Index] = index;
       }
-    } as unknown as ProxyMixedCreator<Prop['_T'] & Prop['_E'], HasDirty>
+    } as unknown as ProxyMixedCreator<Prop['_T'] & Prop['_E']>
   }
 
   allocate<E extends object = {}>(
     value?: DeepPartial<Prop['_T']>,
-    initialize?: (_: PoolProxyMixed<Prop, HasDirty> & E) => void,
-  ): PoolProxyMixed<Prop, HasDirty> & Prop['_E'] & E {
-    let proxy: (ProxyMixed<Prop['_T'], HasDirty> & { [Index]: number });
+    initialize?: (_: PoolProxyMixed<Prop> & E) => void,
+  ): PoolProxyMixed<Prop> & Prop['_E'] & E {
+    let proxy: (ProxyMixed<Prop['_T']> & { [Index]: number });
     // free instance? use it
     if (this.freeList.length > 0) {
       proxy = this.freeList.pop()!;
@@ -94,7 +90,7 @@ export class Pool<
         data.nextGrow = Math.floor(data.memory.buffer.byteLength / this.property.byteWidth);
       }
       // allocate more dirty buffer if we need it
-      if (this.views.onDirty && length === dirty.nextGrow) {
+      if (length === dirty.nextGrow) {
         dirty.memory.grow(1);
         views.dirty = new Uint8Array(dirty.memory.buffer);
         dirty.nextGrow = Math.floor(
@@ -129,7 +125,7 @@ export class Pool<
     new Uint8Array(this.dirty.memory.buffer).fill(0);
   }
 
-  free(proxy: (ProxyMixed<Prop['_T'], HasDirty> & { [Index]: number })) {
+  free(proxy: (ProxyMixed<Prop['_T']> & { [Index]: number })) {
     proxy[MarkClean as any]?.();
     this.freeList.push(proxy);
     this.proxies[proxy[Index]] = null;

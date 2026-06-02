@@ -5,7 +5,7 @@ import { Propertea } from './propertea.ts'
 import {
   Diff,
   MarkClean,
-  type ProxyCreatorConfiguration,
+  type ProxyCreatorConcreteConfiguration,
   type ProxyMixedCreator,
   ProxyProperty,
   Set as ProperteaSet,
@@ -14,7 +14,6 @@ import {
   ToJSONWithoutDefaults,
   type ProxyDecorator,
   type ProxyMixed,
-  type HasDirty,
 } from './proxy.js';
 import { type DeepPartial } from './internal-types.ts';
 
@@ -44,7 +43,7 @@ interface ArrayProxyInterface<T, Stored = T> {
 export class ProperteaArray<
   Element extends Propertea<unknown>,
   Extension extends object = {},
-  Stored = Element extends ProxyProperty<any> ? ProxyMixed<Element['_T'], true> : Element['_T'],
+  Stored = Element extends ProxyProperty<any> ? ProxyMixed<Element['_T']> : Element['_T'],
 >
   extends ProxyProperty<
     ArrayProxyInterface<Element['_T'], Stored>,
@@ -66,23 +65,20 @@ export class ProperteaArray<
     this.codec = crunchesArray({ element: element.codec, length })
   }
 
-  concrete<O extends ProxyCreatorConfiguration>(
-    configuration: O = {} as any,
+  concrete(
+    configuration: ProxyCreatorConcreteConfiguration,
     isRoot = true,
   ) {
     const { defaultValue, element } = this;
     const { dirtyByteWidth } = element;
-    const onDirty = configuration.onDirty ?? true;
-    const onDirtyCallback = 'function' === typeof onDirty ? onDirty : nop;
+    const onDirtyCallback = configuration.onDirty ?? nop;
 
     class ArrayProxy {
 
       $$array: Element['_T'][] = []
 
       constructor() {
-        if (onDirty) {
-          this.dirty = new Set<number>();
-        }
+        this.dirty = new Set<number>();
         this[ProperteaSet](defaultValue);
       }
 
@@ -134,7 +130,7 @@ export class ProperteaArray<
       }
       const pool = new Pool(
         element,
-        onDirty ? {
+        configuration.onDirty ? {
           onDirty: (bit, proxy) => {
             onDirtyCallback(bit, proxy);
             const index = Math.floor(bit / dirtyByteWidth);
@@ -180,29 +176,27 @@ export class ProperteaArray<
         }
         this.$$array.length = length;
       }
-      if (onDirty) {
-        ArrayProxy.prototype[Diff] = function() {
-          const entries: Record<number, any> = {};
-          for (const dirty of this.dirty!) {
-            const v = this.$$array[dirty];
-            // recursively generate diff
-            entries[dirty] = undefined === v ? undefined : v[Diff]();
-          }
-          return entries;
-        };
-        ArrayProxy.prototype[MarkClean] = function() {
-          this.dirty!.clear();
-          for (const value of this.$$array) {
-            value[MarkClean]();
-          }
-        };
-        ArrayProxy.prototype[ToJSON] = function(): Element['_T'][] {
-          const json = [];
-          for (const value of this.$$array) {
-            json.push((value as typeof element['_T'])[ToJSON]());
-          }
-          return json;
+      ArrayProxy.prototype[Diff] = function() {
+        const entries: Record<number, any> = {};
+        for (const dirty of this.dirty!) {
+          const v = this.$$array[dirty];
+          // recursively generate diff
+          entries[dirty] = undefined === v ? undefined : v[Diff]();
         }
+        return entries;
+      };
+      ArrayProxy.prototype[MarkClean] = function() {
+        this.dirty!.clear();
+        for (const value of this.$$array) {
+          value[MarkClean]();
+        }
+      };
+      ArrayProxy.prototype[ToJSON] = function(): Element['_T'][] {
+        const json = [];
+        for (const value of this.$$array) {
+          json.push((value as typeof element['_T'])[ToJSON]());
+        }
+        return json;
       }
     }
     else {
@@ -220,24 +214,22 @@ export class ProperteaArray<
           onDirtyCallback(key, this);
         }
       }
-      if (onDirty) {
-        ArrayProxy.prototype[Diff] = function() {
-          const entries: Record<number, any> = {};
-          for (const dirty of this.dirty!) {
-            entries[dirty] = this.$$array[dirty];
-          }
-          return entries;
-        };
-        ArrayProxy.prototype[MarkClean] = function() {
-          this.dirty!.clear();
-        };
-        ArrayProxy.prototype[ToJSON] = function(): Element['_T'][] {
-          const json = [];
-          for (const value of this.$$array) {
-            json.push(value);
-          }
-          return json;
+      ArrayProxy.prototype[Diff] = function() {
+        const entries: Record<number, any> = {};
+        for (const dirty of this.dirty!) {
+          entries[dirty] = this.$$array[dirty];
         }
+        return entries;
+      };
+      ArrayProxy.prototype[MarkClean] = function() {
+        this.dirty!.clear();
+      };
+      ArrayProxy.prototype[ToJSON] = function(): Element['_T'][] {
+        const json = [];
+        for (const value of this.$$array) {
+          json.push(value);
+        }
+        return json;
       }
     }
     return (
@@ -245,13 +237,12 @@ export class ProperteaArray<
         ? this.decorate(ArrayProxy as unknown as new (index: number) => ArrayProxyInterface<Element['_T'], Stored>)
         : ArrayProxy
       ) as ProxyMixedCreator<
-        ArrayProxyInterface<Element['_T'], Stored> & Extension,
-        HasDirty<O>
+        ArrayProxyInterface<Element['_T'], Stored> & Extension
       >
   }
 
-  mapped<O extends ProxyCreatorConfiguration>(
-    configuration: O = {} as any,
+  mapped(
+    configuration: ProxyCreatorConcreteConfiguration,
     isRoot = true,
   ) {
     return this.concrete(configuration, isRoot)
@@ -262,7 +253,7 @@ export class ProperteaArray<
 export function array<
   P extends Propertea<unknown>,
   E extends object = {},
-  Stored = P extends ProxyProperty<any> ? ProxyMixed<P['_T'], true> : P['_T'],
+  Stored = P extends ProxyProperty<any> ? ProxyMixed<P['_T']> : P['_T'],
 >(
   options: { element: P; length?: number },
   decorate?: ProxyDecorator<ArrayProxyInterface<P['_T'], Stored>, E>,

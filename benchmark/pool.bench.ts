@@ -53,7 +53,7 @@ function createNative() {
   }
 }
 
-const Concrete = pool.property.concrete();
+const Concrete = pool.property.concrete({ dirty: new Uint8Array(Math.ceil(N / 8)) });
 function createConcrete() {
   for (let i = 0; i < N; ++i) {
     new Concrete(i);
@@ -116,7 +116,10 @@ function warm(f: Function) {
   global.gc?.();
 }
 
-const Struct = pool.property.mapped({data: new DataView(new ArrayBuffer(N * pool.property.byteWidth))});
+const Struct = pool.property.mapped({
+  data: new DataView(new ArrayBuffer(N * pool.property.byteWidth)),
+  dirty: new Uint8Array(1),
+});
 
 test('pool', () => {
   const label = `pool (N=${N.toLocaleString()})`;

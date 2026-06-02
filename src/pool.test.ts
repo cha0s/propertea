@@ -93,16 +93,6 @@ test('clean', () => {
   expect(pool.views.dirty[0]).toEqual(0);
 });
 
-test('no dirty tracking', () => {
-  const pool = new Pool(object({
-    z: uint8().default(123),
-    a: uint8().default(234),
-  }), { onDirty: false });
-  const first = pool.allocate();
-  expect(pool.views.dirty).toEqual(undefined);
-  expect(() => { first.z = 12; }).not.toThrow();
-});
-
 test('allocation augmentation', () => {
   const pool = new Pool(object({
     z: uint8().default(123),

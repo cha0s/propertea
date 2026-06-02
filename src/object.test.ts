@@ -6,7 +6,7 @@ import { Diff, Set, SetWithDefaults, ToJSON, ToJSONWithoutDefaults } from './pro
 
 test('concrete', () => {
   const property = object({ x: uint8() });
-  const Proxy = property.concrete();
+  const Proxy = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Proxy(0);
   expect(proxy).toMatchObject({x: 0});
   proxy.x = 12;
@@ -15,7 +15,7 @@ test('concrete', () => {
 
 test('concrete shapeless', () => {
   const property = object({ x: string() });
-  const Proxy = property.concrete();
+  const Proxy = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Proxy(0);
   expect(proxy).toMatchObject({x: ''});
   proxy.x = 'foobar';
@@ -26,7 +26,7 @@ test('nested', () => {
   const property = object({
     o: object({ x: uint8() }),
   });
-  const Proxy = property.concrete();
+  const Proxy = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Proxy(0);
   expect(proxy).toMatchObject({o: {x: 0}});
   proxy.o.x = 12;
@@ -41,7 +41,7 @@ test('dirty', () => {
     a: uint8(),
   });
   const dirty = new Uint8Array([0]);
-  const Proxy = property.concrete({dirty});
+  const Proxy = property.concrete({ dirty });
   const proxy = new Proxy(0);
   expect(dirty).toEqual(new Uint8Array([15]));
   dirty[0] = 0;
@@ -65,7 +65,7 @@ test('onDirty', () => {
     a: uint8(),
   });
   const dirty = new Uint8Array([0]);
-  const Proxy = property.concrete({dirty, onDirty: () => { dirties += 1; }});
+  const Proxy = property.concrete({ dirty, onDirty: () => { dirties += 1; } });
   expect(dirties).toEqual(0);
   const proxy = new Proxy(0);
   expect(dirties).toEqual(4);
@@ -90,7 +90,7 @@ test('mapped onDirty', () => {
     z: uint8().default(34),
     a: object({n: uint8()}),
   });
-  const Proxy = property.mapped({data, dirty, onDirty: () => { dirties += 1; }});
+  const Proxy = property.mapped({ data, dirty, onDirty: () => { dirties += 1; } });
   expect(dirties).toEqual(0);
   const proxy = new Proxy(0);
   proxy[SetWithDefaults]();
@@ -113,7 +113,7 @@ test('toJSON', () => {
     z: uint8().default(34),
     a: object({n: uint8()}),
   });
-  const Proxy = property.concrete();
+  const Proxy = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Proxy(0);
   proxy.x = 1;
   proxy.y = 2;
@@ -129,7 +129,7 @@ test('toJSONWithoutDefaults', () => {
     z: uint8().default(34),
     a: object({n: uint8()}),
   });
-  const Proxy = property.concrete();
+  const Proxy = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Proxy(0);
   proxy.x = 1;
   proxy.y = 2;
@@ -147,9 +147,11 @@ test('diff', () => {
     y: uint8().default(23),
     z: uint8().default(34),
     a: object({n: uint8()}),
+    b: string(),
+    c: uint8().default(45),
   });
   const dirty = new Uint8Array([0]);
-  const Proxy = property.concrete({dirty});
+  const Proxy = property.concrete({ dirty });
   const proxy = new Proxy(0);
   dirty[0] = 0;
   expect(proxy[Diff]()).toEqual(undefined);
@@ -157,6 +159,10 @@ test('diff', () => {
   expect(proxy[Diff]()).toEqual({x: 1});
   dirty[0] |= 8;
   expect(proxy[Diff]()).toEqual({a: {n: 0}, x: 1});
+  dirty[0] |= 16;
+  expect(proxy[Diff]()).toEqual({a: {n: 0}, x: 1, b: ''});
+  dirty[0] |= 32;
+  expect(proxy[Diff]()).toEqual({a: {n: 0}, x: 1, b: '', c: 45});
   dirty[0] = 0;
   expect(proxy[Diff]()).toEqual(undefined);
 });
@@ -166,7 +172,10 @@ test('mapped nested', () => {
   const property = object({
     o: object({x: uint8()}),
   });
-  const Proxy = property.mapped({data});
+  const Proxy = property.mapped({
+    data,
+    dirty: new Uint8Array(1),
+  });
   const proxy = new Proxy(0);
   expect(proxy).toMatchObject({o: {x: 0}});
   expect(data.getUint8(0)).toEqual(0);
@@ -203,7 +212,7 @@ test('set', () => {
     z: uint8(),
     a: uint8(),
   });
-  const Proxy = property.concrete();
+  const Proxy = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Proxy(0);
   proxy[Set]({x: 3, y: 6});
   expect(proxy.x).toEqual(3);
@@ -217,7 +226,7 @@ test('default value', () => {
     z: uint8().default(6),
     a: uint8(),
   }).default({y: 2, z: 3});
-  const Proxy = property.concrete();
+  const Proxy = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Proxy(0);
   proxy[SetWithDefaults]();
   expect(proxy[ToJSON]()).toEqual({x: 1, y: 2, z: 3, a: 0});
@@ -228,7 +237,7 @@ test('decoration', () => {
     {x: uint8().default(123)},
     (O) => class extends O { foo() { return 42 }},
   );
-  const Proxy = property.concrete();
+  const Proxy = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Proxy(0);
   expect(proxy.x).to.equal(123)
   expect(proxy.foo()).to.equal(42)

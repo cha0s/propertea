@@ -9,51 +9,39 @@ export const ToJSON = Symbol('Propertea.ToJSON');
 export const ToJSONWithoutDefaults = Symbol('Propertea.ToJSONWithoutDefaults');
 
 export interface ProxyClass {
+  [Diff](): Record<string, any> | undefined
   [Set](value?: never): void
   [SetWithDefaults](value?: never): void
+  [MarkClean](): void
   [ToJSON](): Record<string, any>
   [ToJSONWithoutDefaults](defaults?: never): Record<string, any> | undefined
 }
 
 export type ProxyMixed<
   T,
-  HasDirty,
 > = (
   & ProxyClass
   & T
-  & (
-    HasDirty extends true
-      ? {
-        [Diff](): Record<string, any> | undefined
-        [MarkClean](): void
-      }
-      : {}
-  )
 )
 
 export type ProxyMixedCreator<
   T,
-  HasDirty,
 > = (
-  new (dataIndex: number) => ProxyMixed<T, HasDirty>
+  new (dataIndex: number) => ProxyMixed<T>
 )
-
-export type ProxyDataConfiguration = {
-  data: DataView
-}
 
 export type ProxyOnDirtyCallback = (bit: number, proxy?: any) => void
 
-export type ProxyDirtyConfiguration = {
+export type ProxyCreatorConcreteConfiguration = {
   dirty: Uint8Array
-  onDirty: boolean | ProxyOnDirtyCallback
+  onDirty?: ProxyOnDirtyCallback
 }
 
-export type ProxyCreatorConfiguration = Partial<ProxyDirtyConfiguration> & Partial<ProxyDataConfiguration>
-
-export type HasDirty<O extends ProxyCreatorConfiguration> = (
-  O extends { onDirty: false } ? false : true
-)
+export type ProxyCreatorMappedConfiguration = {
+  data: DataView
+  dirty: Uint8Array
+  onDirty?: ProxyOnDirtyCallback
+}
 
 export abstract class ProxyProperty<
   T extends object,
@@ -64,15 +52,15 @@ export abstract class ProxyProperty<
   declare _T: T
   declare _E: Extension
 
-  abstract concrete<O extends ProxyCreatorConfiguration>(
-    configuration: O,
+  abstract concrete(
+    configuration: ProxyCreatorConcreteConfiguration,
     isRoot: boolean,
-  ): ProxyMixedCreator<T & Extension, HasDirty<O>>
+  ): ProxyMixedCreator<T & Extension>
 
-  abstract mapped<O extends ProxyCreatorConfiguration>(
-    configuration: O,
+  abstract mapped(
+    configuration: ProxyCreatorMappedConfiguration,
     isRoot: boolean,
-  ): ProxyMixedCreator<T & Extension, HasDirty<O>>
+  ): ProxyMixedCreator<T & Extension>
 
 }
 

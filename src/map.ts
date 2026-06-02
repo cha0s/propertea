@@ -5,7 +5,7 @@ import { Propertea } from './propertea.ts'
 import {
   Diff,
   MarkClean,
-  type ProxyCreatorConfiguration,
+  type ProxyCreatorConcreteConfiguration,
   type ProxyMixedCreator,
   ProxyProperty,
   Set as ProperteaSet,
@@ -14,7 +14,6 @@ import {
   ToJSONWithoutDefaults,
   type ProxyDecorator,
   type ProxyMixed,
-  type HasDirty,
 } from './proxy.js';
 
 const Key = Symbol('Index');
@@ -45,7 +44,7 @@ export class ProperteaMap<
   Key extends Propertea<MapKey>,
   Value extends Propertea<unknown>,
   Extension extends object = {},
-  Stored = Value extends ProxyProperty<any> ? ProxyMixed<Value['_T'], true> : Value['_T'],
+  Stored = Value extends ProxyProperty<any> ? ProxyMixed<Value['_T']> : Value['_T'],
 >
   extends ProxyProperty<
     MapProxyInterface<Key['_T'], Value['_T'], Stored>,
@@ -70,8 +69,8 @@ export class ProperteaMap<
     this.codec = crunchesMap({ key: key.codec, value: value.codec })
   }
 
-  concrete<O extends ProxyCreatorConfiguration>(
-    configuration: O = {} as any,
+  concrete(
+    configuration: ProxyCreatorConcreteConfiguration,
     isRoot = true,
   ) {
 
@@ -227,11 +226,11 @@ export class ProperteaMap<
       this.decorate
         ? this.decorate(MapProxy as unknown as new (index: number) => MapProxyInterface<Key['_T'], Value['_T'], Stored>)
         : MapProxy
-      ) as ProxyMixedCreator<MapProxyInterface<Key['_T'], Value['_T'], Stored> & Extension, HasDirty<O>>
+      ) as ProxyMixedCreator<MapProxyInterface<Key['_T'], Value['_T'], Stored> & Extension>
   }
 
-  mapped<O extends ProxyCreatorConfiguration>(
-    configuration: O = {} as any,
+  mapped(
+    configuration: ProxyCreatorConcreteConfiguration,
     isRoot = true,
   ) {
     return this.concrete(configuration, isRoot)
@@ -243,7 +242,7 @@ export function map<
   K extends Propertea<MapKey>,
   V extends Propertea<unknown>,
   E extends object = {},
-  Stored = V extends ProxyProperty<any> ? ProxyMixed<V['_T'], true> : V['_T'],
+  Stored = V extends ProxyProperty<any> ? ProxyMixed<V['_T']> : V['_T'],
 >(
   options: { key: K; value: V },
   decorate?: ProxyDecorator<MapProxyInterface<K['_T'], V['_T'], Stored>, E>,

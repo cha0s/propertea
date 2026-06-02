@@ -3,13 +3,11 @@ import { object as crunchesObject, type CrunchesType } from 'crunches'
 import type { DeepPartial } from './internal-types.ts';
 import {
   Diff,
-  type HasDirty,
   Instance,
   MarkClean,
-  type ProxyCreatorConfiguration,
-  type ProxyDataConfiguration,
+  type ProxyCreatorConcreteConfiguration,
+  type ProxyCreatorMappedConfiguration,
   type ProxyDecorator,
-  type ProxyDirtyConfiguration,
   type ProxyMixed,
   type ProxyMixedCreator,
   ProxyProperty,
@@ -27,7 +25,7 @@ export type ProperteaObjectProps = Record<string, Propertea<unknown>>
 
 export type ProperteaObjectShape<Props extends Record<string, Propertea<any>>> = {
   [K in keyof Props]: Props[K] extends ProxyProperty<any>
-    ? ProxyMixed<Props[K]['_T'], true>
+    ? ProxyMixed<Props[K]['_T']>
     : Props[K]['_T']
 }
 
@@ -82,8 +80,8 @@ export class ProperteaObject<
     this.byteWidth = byteWidths.some((w) => 0 === w) ? 0 : byteWidths.reduce((l, r) => l + r, 0);
     this.dirtyByteWidth = dirtyByteWidth;
   }
-  concrete<O extends ProxyCreatorConfiguration>(
-    configuration: O = {} as any,
+  concrete(
+    configuration: ProxyCreatorConcreteConfiguration,
     isRoot = true,
   ) {
     const {properties} = this;
@@ -106,24 +104,22 @@ export class ProperteaObject<
               get ['${key}']() { return this[symbol]['${key}']; }
               ${
                 property instanceof ProxyProperty
-                  ? `set ['${key}'](value) { this[symbol]['${key}'][Set](value); }`
-                  : (
-                    configuration.dirty
-                      ? `
-                        set ['${key}'](value) {
-                          // remember
-                          const previous = this[symbol]['${key}'];
-                          this[symbol]['${key}'] = value;
-                          // dirty if different
-                          if (previous !== value) {
-                            const bit = ${dirtyIndex} + this[DirtyOffset];
-                            configuration.dirty[bit >> 3] |= 1 << (bit & 7);
-                            ${isRoot ? `onDirtyCallback(bit, this);` : ''}
-                          }
-                        }
-                      `
-                      : `set ['${key}'](value) { this[symbol]['${key}'] = value; }`
-                  )
+                  ? `
+                    set ['${key}'](value) { this[symbol]['${key}'][Set](value); }
+                  `
+                  : `
+                    set ['${key}'](value) {
+                      // remember
+                      const previous = this[symbol]['${key}'];
+                      this[symbol]['${key}'] = value;
+                      // dirty if different
+                      if (previous !== value) {
+                        const bit = ${dirtyIndex} + this[DirtyOffset];
+                        configuration.dirty[bit >> 3] |= 1 << (bit & 7);
+                        ${isRoot ? `onDirtyCallback(bit, this);` : ''}
+                      }
+                    }
+                  `
               }
             `;
             dirtyIndex += property.dirtyByteWidth;
@@ -135,9 +131,7 @@ export class ProperteaObject<
         configuration,
         DirtyOffset,
         Instance,
-        onDirtyCallback: 'function' === typeof configuration.onDirty
-          ? configuration.onDirty
-          : nop,
+        onDirtyCallback: configuration.onDirty ?? nop,
         property: this,
         Proxy,
         Set,
@@ -147,20 +141,57 @@ export class ProperteaObject<
       this.decorate
         ? this.decorate(Base)
         : Base
-    ) as ProxyMixedCreator<ProperteaObjectShape<P> & typeof Proxy & Decorator, HasDirty<O>>
+    ) as ProxyMixedCreator<ProperteaObjectShape<P> & typeof Proxy & Decorator>
   }
-  generateProxy<O extends ProxyDirtyConfiguration>({
+  generateProxy({
     defaults,
     configuration,
     isRoot,
   }: {
     defaults: Record<string, any>,
-    configuration: Partial<ProxyDataConfiguration> & Partial<O>,
+    configuration: ProxyCreatorConcreteConfiguration & { data?: DataView },
     isRoot: boolean,
   }) {
     const { properties } = this;
     // proxy API
     class ObjectProxy {
+      [Diff]() {
+        let diff: Record<string, any> | undefined;
+        let dirtyOffset = this[DirtyOffset];
+        for (const key in properties) {
+          const property = properties[key];
+          let keyDiff;
+          // recur
+          if (property instanceof ProxyProperty) {
+            keyDiff = (this as any)[key][Diff]();
+          }
+          // check dirty bit
+          else if (configuration.dirty[dirtyOffset >> 3] & (1 << (dirtyOffset & 7))) {
+            keyDiff = (this as any)[key];
+          }
+          if (undefined !== keyDiff) {
+            diff ??= {};
+            diff[key] = keyDiff;
+          }
+          dirtyOffset += property.dirtyByteWidth;
+        }
+        return diff;
+      }
+      // @ts-expect-error - set in generated constructor
+      [DirtyOffset]: number
+      ;[MarkClean]() {
+        let bit = this[DirtyOffset];
+        for (const key in properties) {
+          const property = properties[key];
+          if (property instanceof ProxyProperty) {
+            (this as any)[key][MarkClean]();
+          }
+          else {
+            configuration.dirty[bit >> 3] &= ~(1 << (bit & 7));
+          }
+          bit += property.dirtyByteWidth;
+        }
+      }
       [ToJSON]() {
         const json: Record<string, any> = {};
         for (const key in properties) {
@@ -192,52 +223,9 @@ export class ProperteaObject<
       }
     }
     interface ObjectProxy {
-      [Diff](): Record<string, any> | undefined
-      [DirtyOffset]: number
-      [MarkClean](): void
       [Set](value?: DeepPartial<ProperteaObjectShape<P>>): void
       [SetWithDefaults](value?: DeepPartial<ProperteaObjectShape<P>>): void
     }
-    // dirty API
-    if (configuration.onDirty ?? true) {
-      ObjectProxy.prototype[Diff] = function() {
-        let diff: Record<string, any> | undefined;
-        let dirtyOffset = this[DirtyOffset];
-        for (const key in properties) {
-          const property = properties[key];
-          let keyDiff;
-          // recur
-          if (property instanceof ProxyProperty) {
-            keyDiff = (this as any)[key][Diff]();
-          }
-          // check dirty bit
-          else if (configuration.dirty![dirtyOffset >> 3] & (1 << (dirtyOffset & 7))) {
-            keyDiff = (this as any)[key];
-          }
-          if (undefined !== keyDiff) {
-            diff ??= {};
-            diff[key] = keyDiff;
-          }
-          dirtyOffset += property.dirtyByteWidth;
-        }
-        return diff;
-      };
-      ObjectProxy.prototype[MarkClean] = function() {
-        let bit = this[DirtyOffset];
-        for (const key in properties) {
-          const property = properties[key];
-          if (property instanceof ProxyProperty) {
-            (this as any)[key][MarkClean]();
-          }
-          else if (configuration.dirty) {
-            configuration.dirty[bit >> 3] &= ~(1 << (bit & 7));
-          }
-          bit += property.dirtyByteWidth;
-        }
-      };
-    }
-    const hasProxies = Object.values(properties)
-      .some((property) => property instanceof ProxyProperty);
     return codegen(`
       const {
         byteWidth,
@@ -256,25 +244,11 @@ export class ProperteaObject<
             }
           };
           let dataOffset = ${
-            configuration.data
-              ? (isRoot ? 'dataIndex * byteWidth' : 'dataIndex')
-              : 0
+            configuration.data ? (isRoot ? 'dataIndex * byteWidth' : 'dataIndex') : 0
           };
-          let dirtyOffset = ${
-            configuration.dirty
-              ? (isRoot ? 'dataIndex * dirtyByteWidth' : 'dirtyIndex')
-              : 0
-          };
-          ${
-            configuration.data
-              ? 'this[DataOffset] = dataOffset;'
-              : ''
-            }
-          ${
-            configuration.dirty
-              ? 'this[DirtyOffset] = dirtyOffset;'
-              : ''
-            }
+          let dirtyOffset = ${(isRoot ? 'dataIndex * dirtyByteWidth' : 'dirtyIndex')};
+          ${configuration.data ? 'this[DataOffset] = dataOffset;' : ''}
+          this[DirtyOffset] = dirtyOffset;
           ${
             // constant key access
             Object.keys(defaults)
@@ -289,16 +263,8 @@ export class ProperteaObject<
                       : 'this[key] = defaults[key]'
                   }
                   ${''/* increment offsets */}
-                  ${
-                    (hasProxies && configuration.data)
-                      ? `dataOffset += properties[key].byteWidth;`
-                      : ''
-                  }
-                  ${
-                    (hasProxies && configuration.dirty)
-                      ? `dirtyOffset += properties[key].dirtyByteWidth;`
-                      : ''
-                  }
+                  ${configuration.data ? `dataOffset += properties[key].byteWidth;` : ''}
+                  dirtyOffset += properties[key].dirtyByteWidth;
                 }`;
               }).join('\n')
           }
@@ -351,19 +317,13 @@ export class ProperteaObject<
               }`).join('\n')
             }
           }
-          ${
-            configuration.dirty
-            ? `
-              let bit = this[DirtyOffset];
-              for (let i = 0; i < dirtyByteWidth; ++i) {
-                if (0 === (configuration.dirty[bit >> 3] & 1 << (bit & 7))) {
-                  configuration.dirty[bit >> 3] |= 1 << (bit & 7);
-                  onDirtyCallback(bit, this);
-                }
-                bit += 1;
-              }
-            `
-            : ''
+          let bit = this[DirtyOffset];
+          for (let i = 0; i < dirtyByteWidth; ++i) {
+            if (0 === (configuration.dirty[bit >> 3] & 1 << (bit & 7))) {
+              configuration.dirty[bit >> 3] |= 1 << (bit & 7);
+              onDirtyCallback(bit, this);
+            }
+            bit += 1;
           }
         }
       }
@@ -373,9 +333,7 @@ export class ProperteaObject<
       defaults,
       DirtyOffset,
       Instance,
-      onDirtyCallback: 'function' === typeof configuration.onDirty
-        ? configuration.onDirty
-        : nop,
+      onDirtyCallback: configuration.onDirty ?? nop,
       properties,
       property: this,
       ObjectProxy,
@@ -384,8 +342,8 @@ export class ProperteaObject<
     }) as ObjectProxy;
   }
 
-  mapped<O extends ProxyCreatorConfiguration>(
-    configuration: O = {} as any,
+  mapped(
+    configuration: ProxyCreatorMappedConfiguration,
     isRoot = true,
   ) {
     const {properties} = this;
@@ -410,7 +368,9 @@ export class ProperteaObject<
               const props = `
                 ${
                   property instanceof ProxyProperty
-                  ? `get ['${key}']() { return this[symbol]['${key}']; }`
+                  ? `
+                    get ['${key}']() { return this[symbol]['${key}']; }
+                  `
                   : `
                     get ['${key}']() {
                       return properties['${key}'].codec.decodeFrom(configuration.data, {
@@ -421,34 +381,24 @@ export class ProperteaObject<
                 }
                 ${
                   property instanceof ProxyProperty
-                    ? `set ['${key}'](value) { this[symbol]['${key}'][Set](value); }`
-                    : (
-                      `
-                        set ['${key}'](value) {
-                          ${
-                            configuration.dirty
-                            ? `const previous = this['${key}'];`
-                            : ''
-                          }
-                          properties['${key}'].codec.encodeInto(
-                            value,
-                            configuration.data,
-                            this[DataOffset] + ${dataIndex},
-                          );
-                          ${
-                            configuration.dirty
-                            ? `
-                              if (previous !== value) {
-                                const bit = ${dirtyIndex} + this[DirtyOffset];
-                                configuration.dirty[bit >> 3] |= 1 << (bit & 7);
-                                ${isRoot ? 'onDirtyCallback(bit, this);' : ''}
-                              }
-                            `
-                            : ''
-                          }
+                    ? `
+                      set ['${key}'](value) { this[symbol]['${key}'][Set](value); }
+                    `
+                    : `
+                      set ['${key}'](value) {
+                        const previous = this['${key}'];
+                        properties['${key}'].codec.encodeInto(
+                          value,
+                          configuration.data,
+                          this[DataOffset] + ${dataIndex},
+                        );
+                        if (previous !== value) {
+                          const bit = ${dirtyIndex} + this[DirtyOffset];
+                          configuration.dirty[bit >> 3] |= 1 << (bit & 7);
+                          ${isRoot ? 'onDirtyCallback(bit, this);' : ''}
                         }
-                      `
-                    )
+                      }
+                    `
                 }
               `;
               dataIndex += property.byteWidth;
@@ -464,9 +414,7 @@ export class ProperteaObject<
         DataOffset,
         DirtyOffset,
         Instance,
-        onDirtyCallback: 'function' === typeof configuration.onDirty
-          ? configuration.onDirty
-          : nop,
+        onDirtyCallback: configuration.onDirty ?? nop,
         properties,
         property: this,
         Proxy,
@@ -474,10 +422,8 @@ export class ProperteaObject<
       }
     )
     return (
-      this.decorate
-        ? this.decorate(Base)
-        : Base
-    ) as ProxyMixedCreator<ProperteaObjectShape<P> & Decorator, HasDirty<O>>
+      this.decorate ? this.decorate(Base) : Base
+    ) as ProxyMixedCreator<ProperteaObjectShape<P> & Decorator>
   }
 
 }

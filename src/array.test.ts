@@ -9,7 +9,7 @@ test('default value', () => {
   const property = array({
     element: uint8(),
   }).default([1, 2, 3]);
-  const Proxy = property.concrete();
+  const Proxy = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Proxy(0);
   expect(proxy[Diff]()).toEqual({0: 1, 1: 2, 2: 3});
 });
@@ -18,7 +18,7 @@ test('primitive', () => {
   const property = array({
     element: uint8(),
   });
-  const Proxy = property.concrete();
+  const Proxy = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Proxy(0);
   proxy.setAt(0, 1);
   expect(proxy.at(0)).toEqual(1);
@@ -29,7 +29,7 @@ test('proxy', () => {
   const property = array({
     element: object({ x: uint8() }),
   });
-  const Proxy = property.concrete();
+  const Proxy = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Proxy(0);
   const value = {x: 4};
   proxy.setAt(0, value);
@@ -56,7 +56,7 @@ test('within', () => {
   const property = object({
     x: array({ element: uint8() }),
   });
-  const Proxy = property.concrete();
+  const Proxy = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Proxy(0);
   const value = [1, 2, 3];
   proxy.x[Set](value);
@@ -71,7 +71,7 @@ test('set diff', () => {
   const property = array({
     element: uint8(),
   });
-  const Proxy = property.concrete();
+  const Proxy = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Proxy(0);
   proxy.setAt(0, 1);
   proxy.setAt(1, 2);
@@ -85,6 +85,7 @@ test('set with defaults', () => {
     element: uint8(),
   });
   const Proxy = property.concrete({
+    dirty: new Uint8Array(1),
     onDirty: () => { dirties += 1; }
   });
   const proxy = new Proxy(0);
@@ -99,6 +100,7 @@ test('reactivity', () => {
     element: uint8(),
   });
   const Proxy = property.concrete({
+    dirty: new Uint8Array(1),
     onDirty: () => { dirties += 1; }
   });
   const proxy = new Proxy(0);
@@ -117,6 +119,7 @@ test('reactivity (proxy)', () => {
     element: object({ x: uint8() }),
   });
   const Proxy = property.concrete({
+    dirty: new Uint8Array(1),
     onDirty: () => { dirties += 1; }
   });
   const proxy = new Proxy(0);
@@ -131,22 +134,11 @@ test('reactivity (proxy)', () => {
   expect(dirties).toEqual(4);
 });
 
-test('disabled dirty tracking (proxy)', () => {
-  const property = array({
-    element: object({ x: uint8() }),
-  });
-  const Proxy = property.concrete({onDirty: false});
-  const proxy = new Proxy(0);
-  proxy.setAt(0, {x: 1});
-  expect('dirty' in proxy).toEqual(false);
-  expect(Diff in proxy).to.equal(false);
-});
-
 test('remove element', () => {
   const property = array({
     element: uint8(),
   });
-  const Proxy = property.concrete();
+  const Proxy = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Proxy(0);
   proxy.setAt(0, 1);
   proxy.setAt(1, 2);
@@ -158,7 +150,7 @@ test('remove element (proxy)', () => {
   const property = array({
     element: object({ x: uint8() }),
   });
-  const Proxy = property.concrete();
+  const Proxy = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Proxy(0);
   proxy.setAt(0, {x: 1});
   proxy.setAt(1, {x: 2});
@@ -176,7 +168,7 @@ test('decoration', () => {
     { element: uint8() },
     (O) => class extends O { foo() { return 42 }},
   );
-  const Proxy = property.concrete();
+  const Proxy = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Proxy(0);
   expect(proxy.foo()).to.equal(42)
 });
