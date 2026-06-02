@@ -1,6 +1,7 @@
 import { array as crunchesArray } from 'crunches'
 
 import { Pool } from './pool.js';
+import { Propertea } from './propertea.ts'
 import {
   Diff,
   MarkClean,
@@ -15,7 +16,6 @@ import {
   type ProxyMixed,
   type HasDirty,
 } from './proxy.js';
-import { Property } from './types.ts'
 import { type DeepPartial } from './internal-types.ts';
 
 const Key = Symbol('Index');
@@ -38,7 +38,7 @@ interface ArrayProxyInterface<T, Stored = T> {
 }
 
 export class ProperteaArray<
-  Element extends Property<unknown>,
+  Element extends Propertea<unknown>,
   Extension extends object = {},
   Stored = Element extends ProxyProperty<any> ? ProxyMixed<Element['_T'], true> : Element['_T'],
 >
@@ -255,7 +255,7 @@ export class ProperteaArray<
 }
 
 export function array<
-  P extends Property<unknown>,
+  P extends Propertea<unknown>,
   E extends object = {},
   Stored = P extends ProxyProperty<any> ? ProxyMixed<P['_T'], true> : P['_T'],
 >(

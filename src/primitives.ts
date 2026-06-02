@@ -1,40 +1,74 @@
 import * as crunches from 'crunches'
 
-import { Property } from './types.ts'
+import { Propertea } from './propertea.ts'
 
-abstract class NumberProperty extends Property<number> {
+abstract class NumberProperty extends Propertea<number> {
   defaultValue = 0
 }
 
-abstract class BigNumberProperty extends Property<bigint> {
+abstract class BigNumberProperty extends Propertea<bigint> {
   defaultValue = 0n
 }
 
-export class ProperteaBoolean extends Property<boolean> {
+export class ProperteaBoolean extends Propertea<boolean> {
   codec = crunches.boolean()
   defaultValue = false
 }
 
-export class ProperteaInt8 extends NumberProperty { byteWidth = 1; codec = crunches.int8() }
-export class ProperteaInt16 extends NumberProperty { byteWidth = 2; codec = crunches.int16() }
-export class ProperteaInt32 extends NumberProperty { byteWidth = 4; codec = crunches.int32() }
-export class ProperteaInt64 extends BigNumberProperty { byteWidth = 8; codec = crunches.int64() }
+export class ProperteaInt8 extends NumberProperty {
+  byteWidth = 1
+  codec = crunches.int8()
+}
+export class ProperteaInt16 extends NumberProperty {
+  byteWidth = 2
+  codec = crunches.int16()
+}
+export class ProperteaInt32 extends NumberProperty {
+  byteWidth = 4
+  codec = crunches.int32()
+}
+export class ProperteaInt64 extends BigNumberProperty {
+  byteWidth = 8
+  codec = crunches.int64()
+}
 
-export class ProperteaFloat32 extends NumberProperty { byteWidth = 4; codec = crunches.float32() }
-export class ProperteaFloat64 extends NumberProperty { byteWidth = 8; codec = crunches.float64() }
+export class ProperteaFloat32 extends NumberProperty {
+  byteWidth = 4
+  codec = crunches.float32()
+}
+export class ProperteaFloat64 extends NumberProperty {
+  byteWidth = 8
+  codec = crunches.float64()
+}
 
-export class ProperteaString extends Property<string> {
+export class ProperteaString extends Propertea<string> {
   codec = crunches.string()
   defaultValue = ''
 }
 
-export class ProperteaUint8 extends NumberProperty { byteWidth = 1; codec = crunches.uint8() }
-export class ProperteaUint16 extends NumberProperty { byteWidth = 2; codec = crunches.uint16() }
-export class ProperteaUint32 extends NumberProperty { byteWidth = 4; codec = crunches.uint32() }
-export class ProperteaUint64 extends BigNumberProperty { byteWidth = 8; codec = crunches.uint64() }
+export class ProperteaUint8 extends NumberProperty {
+  byteWidth = 1
+  codec = crunches.uint8()
+}
+export class ProperteaUint16 extends NumberProperty {
+  byteWidth = 2
+  codec = crunches.uint16()
+}
+export class ProperteaUint32 extends NumberProperty {
+  byteWidth = 4
+  codec = crunches.uint32()
+}
+export class ProperteaUint64 extends BigNumberProperty {
+  byteWidth = 8
+  codec = crunches.uint64()
+}
 
-export class ProperteaVarint extends NumberProperty { codec = crunches.varint() }
-export class ProperteaVaruint extends NumberProperty { codec = crunches.varuint() }
+export class ProperteaVarint extends NumberProperty {
+  codec = crunches.varint()
+}
+export class ProperteaVaruint extends NumberProperty {
+  codec = crunches.varuint()
+}
 
 export const boolean = () => new ProperteaBoolean()
 

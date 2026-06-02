@@ -1,6 +1,7 @@
 import { map as crunchesMap } from 'crunches'
 
 import { Pool } from './pool.js';
+import { Propertea } from './propertea.ts'
 import {
   Diff,
   MarkClean,
@@ -15,7 +16,6 @@ import {
   type ProxyMixed,
   type HasDirty,
 } from './proxy.js';
-import { Property } from './types.ts'
 
 const Key = Symbol('Index');
 const MapSymbol = Symbol('MapSymbol');
@@ -42,8 +42,8 @@ interface MapProxyInterface<K, V, Stored = V> {
 const nop = () => {};
 
 export class ProperteaMap<
-  Key extends Property<MapKey>,
-  Value extends Property<unknown>,
+  Key extends Propertea<MapKey>,
+  Value extends Propertea<unknown>,
   Extension extends object = {},
   Stored = Value extends ProxyProperty<any> ? ProxyMixed<Value['_T'], true> : Value['_T'],
 >
@@ -241,8 +241,8 @@ export class ProperteaMap<
 };
 
 export function map<
-  K extends Property<MapKey>,
-  V extends Property<unknown>,
+  K extends Propertea<MapKey>,
+  V extends Propertea<unknown>,
   E extends object = {},
   Stored = V extends ProxyProperty<any> ? ProxyMixed<V['_T'], true> : V['_T'],
 >(

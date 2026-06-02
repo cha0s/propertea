@@ -1,4 +1,4 @@
-import { Property } from './types.ts';
+import { Propertea } from './propertea.ts';
 
 export const Diff = Symbol('Propertea.Diff');
 export const Instance = Symbol('Propertea.Instance');
@@ -59,7 +59,7 @@ export abstract class ProxyProperty<
   T extends object,
   Extension extends object = {},
   Default = Partial<T>,
-> extends Property<T, Default> {
+> extends Propertea<T, Default> {
   declare _T: T
   declare _E: Extension
   abstract concrete<O extends ProxyCreatorConfiguration>(

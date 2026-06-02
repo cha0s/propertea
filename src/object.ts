@@ -1,5 +1,6 @@
 import { object as crunchesObject, type CrunchesType } from 'crunches'
 
+import type { DeepPartial } from './internal-types.ts';
 import {
   Diff,
   type HasDirty,
@@ -17,15 +18,14 @@ import {
   ToJSON,
   ToJSONWithoutDefaults,
 } from './proxy.js';
-import { Property } from './types.ts'
-import type { DeepPartial } from './internal-types.ts';
+import { Propertea } from './propertea.ts'
 
 const DataOffset = Symbol('Propertea.object.DataOffset');
 const DirtyOffset = Symbol('Propertea.object.DirtyOffset');
 
-export type ProperteaObjectProps = Record<string, Property<unknown>>
+export type ProperteaObjectProps = Record<string, Propertea<unknown>>
 
-export type ProperteaObjectShape<Props extends Record<string, Property<any>>> = {
+export type ProperteaObjectShape<Props extends Record<string, Propertea<any>>> = {
   [K in keyof Props]: Props[K] extends ProxyProperty<any>
     ? ProxyMixed<Props[K]['_T'], true>
     : Props[K]['_T']
