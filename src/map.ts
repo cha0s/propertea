@@ -175,23 +175,21 @@ export class ProperteaMap<
           this.$$map.set(key, localValue)
         }
       }
-      if (configuration.onDirty ?? true) {
-        MapProxy.prototype[Diff] = function() {
-          const entries = [];
-          for (const dirty of this.dirty) {
-            const v = this.get(dirty);
-            // recursively generate diff
-            entries.push([dirty, undefined === v ? null : v[Diff]()]);
-          }
-          return entries;
-        };
-        MapProxy.prototype[MarkClean] = function() {
-          this.dirty.clear();
-          for (const entry of this.$$map) {
-            entry[1][MarkClean]();
-          }
-        };
-      }
+      MapProxy.prototype[Diff] = function() {
+        const entries = [];
+        for (const dirty of this.dirty) {
+          const v = this.get(dirty);
+          // recursively generate diff
+          entries.push([dirty, undefined === v ? undefined : v[Diff]()]);
+        }
+        return entries;
+      };
+      MapProxy.prototype[MarkClean] = function() {
+        this.dirty.clear();
+        for (const entry of this.$$map) {
+          entry[1][MarkClean]();
+        }
+      };
     }
     else {
       MapProxy.prototype[ToJSON] = function(): MapEntry<Key['_T'], Value['_T']>[] {

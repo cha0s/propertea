@@ -78,12 +78,12 @@ test('dirty', () => {
   proxy.set(0, value);
   expect(proxy[Diff]()).toEqual([[0, {x: 3}]]);
   proxy.delete(0);
-  expect(proxy[Diff]()).toEqual([[0, null]]);
+  expect(proxy[Diff]()).toEqual([[0, undefined]]);
   proxy.set(1, value);
   proxy.set(2, value);
   proxy[MarkClean]();
   proxy.clear();
-  expect(proxy[Diff]()).toEqual([[1, null], [2, null]]);
+  expect(proxy[Diff]()).toEqual([[1, undefined], [2, undefined]]);
   proxy[MarkClean]();
   expect(proxy[Diff]()).toEqual([]);
 });
