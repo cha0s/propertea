@@ -38,12 +38,12 @@ test('boolean', () => {
     expect(propertea().default(2).defaultValue).toEqual(2)
   })
   test(`mapped ${propertea.name}`, () => {
-    const { elementClass } = propertea().codec
+    const { typedArray } = propertea().codec
     const property = object({
       x: propertea(),
       y: propertea(),
     });
-    const data = new elementClass(2);
+    const data = new typedArray(2);
     const Proxy = property.mapped({
       data: new DataView(data.buffer),
       dirty: new Uint8Array(1),
@@ -51,7 +51,7 @@ test('boolean', () => {
     const proxy = new Proxy(0);
     proxy.x = 1;
     proxy.y = 2;
-    expect(data).toEqual(new elementClass([proxy.x, proxy.y]));
+    expect(data).toEqual(new typedArray([proxy.x, proxy.y]));
   })
 })
 
@@ -64,12 +64,12 @@ test('boolean', () => {
     expect(propertea().default(2n).defaultValue).toEqual(2n);
   })
   test(`mapped ${propertea.name}`, () => {
-    const { elementClass } = propertea().codec
+    const { typedArray } = propertea().codec
     const property = object({
       x: propertea(),
       y: propertea(),
     });
-    const data = new elementClass(2);
+    const data = new typedArray(2);
     const Proxy = property.mapped({
       data: new DataView(data.buffer),
       dirty: new Uint8Array(1),
@@ -77,7 +77,7 @@ test('boolean', () => {
     const proxy = new Proxy(0);
     proxy.x = 1n;
     proxy.y = 2n;
-    expect(data).toEqual(new elementClass([proxy.x, proxy.y]));
+    expect(data).toEqual(new typedArray([proxy.x, proxy.y]));
   })
 });
 
