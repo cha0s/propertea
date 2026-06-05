@@ -1,4 +1,4 @@
-import { object as crunchesObject, type CrunchesType } from 'crunches'
+import { CrunchesObject, CrunchesOptional, type CrunchesType } from 'crunches'
 
 import type { DeepPartial } from './internal-types.ts';
 import {
@@ -50,7 +50,7 @@ export class ProperteaObject<
   extends ProxyProperty<ProperteaObjectShape<P>, Decorator>
 {
 
-  codec: ReturnType<typeof crunchesObject>
+  codec: CrunchesObject<any>
   decorate: ProxyDecorator<ProperteaObjectShape<ProperteaObjectProps>, Decorator> | undefined
   properties: P
 
@@ -61,7 +61,7 @@ export class ProperteaObject<
     super()
     this.decorate = decorate
     this.properties = {} as P
-    const codecProperties: Record<string, CrunchesType<unknown>> = {}
+    const codecProperties: Record<string, CrunchesOptional<CrunchesType<unknown>>> = {}
     const byteWidths = [];
     let dirtyByteWidth = 0;
     for (const key in properties) {
@@ -70,13 +70,13 @@ export class ProperteaObject<
       // augment with instance symbol
       defineProperty(propertea, Instance, Symbol(`Propertea.object.property.${key}`))
       // map codecs
-      codecProperties[key] = propertea.codec
+      codecProperties[key] = propertea.codec.optional()
       // accumulate widths
       byteWidths.push(propertea.byteWidth);
       dirtyByteWidth += propertea.dirtyByteWidth;
     }
     // store codec and computed widths
-    this.codec = crunchesObject(codecProperties)
+    this.codec = new CrunchesObject(codecProperties)
     this.byteWidth = byteWidths.some((w) => 0 === w) ? 0 : byteWidths.reduce((l, r) => l + r, 0);
     this.dirtyByteWidth = dirtyByteWidth;
   }
