@@ -58,6 +58,12 @@ export class ProperteaArrayCodec<
     this.mapCodec = new CrunchesMap({ key: new CrunchesVarInt(), value: element })
   }
 
+  bigEndian(): this {
+    this.arrayCodec.bigEndian()
+    this.mapCodec.bigEndian()
+    return super.bigEndian()
+  }
+
   decodeFrom(view: DataView, target: Target): Array<E['_output'] | undefined> | Map<number, E['_output'] | undefined> {
     const isDiff = view.getUint8(target.byteOffset)
     target.byteOffset += 1
@@ -81,6 +87,12 @@ export class ProperteaArrayCodec<
       written += this.arrayCodec.encodeInto(value as any, view, byteOffset + written)
     }
     return written
+  }
+
+  littleEndian(): this {
+    this.arrayCodec.littleEndian()
+    this.mapCodec.littleEndian()
+    return super.littleEndian()
   }
 
   sizeOf(value: (Iterable<E['_input'] | undefined>) | Map<number, E['_input'] | undefined>, byteOffset: number) {
