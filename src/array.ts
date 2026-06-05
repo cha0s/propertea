@@ -1,4 +1,4 @@
-import { array as crunchesArray } from 'crunches'
+import { CrunchesArray, CrunchesMap, CrunchesType, CrunchesVarInt, type Target } from 'crunches'
 
 import { Pool } from './pool.js';
 import { Propertea } from './propertea.ts'
@@ -17,26 +17,83 @@ import {
 } from './proxy.js';
 import { type DeepPartial } from './internal-types.ts';
 
-const Key = Symbol('Index');
-const ArraySymbol = Symbol('ArraySymbol');
+const ArraySymbol = Symbol('Propertea.array.Array');
+const Key = Symbol('Propertea.array.Index');
 
 const nop = () => {};
-
-type ArrayDiff<T> = Record<string, T>
 
 interface ArrayProxyInterface<T, Stored = T> {
 
   dirty: Set<number> | undefined
   pool: any
 
-  [ProperteaSet](value: Iterable<[number, T]>): void
-  [Initialize](value?: Iterable<T> | ArrayDiff<T>): void
+  [Diff](): Map<number, T | undefined> | undefined
+  [MarkClean](): void
+  [ProperteaSet](value: Map<number, T | undefined>): void
+  [Initialize](value?: Iterable<T>): void
   [ToJSON](): T[]
   [ToJSONWithoutDefaults](defaults?: any): T[] | undefined
 
   at(key: number): Stored | undefined
   setAt(key: number, value: T | undefined): void
   setLength(length: number): void
+
+}
+
+export class ProperteaArrayCodec<
+  E extends CrunchesType<unknown, unknown>
+>
+  extends CrunchesType<
+    Array<E['_output'] | undefined> | Map<number, E['_output'] | undefined>,
+    Iterable<E['_input'] | undefined> | Map<number, E['_input'] | undefined>
+  >
+{
+
+  arrayCodec: CrunchesArray<E, true>
+  mapCodec: CrunchesMap<CrunchesVarInt, E>
+
+  constructor({ element }: { element: E }) {
+    super()
+    this.arrayCodec = new CrunchesArray({ element, sparse: true })
+    this.mapCodec = new CrunchesMap({ key: new CrunchesVarInt(), value: element })
+  }
+
+  decodeFrom(view: DataView, target: Target): Array<E['_output'] | undefined> | Map<number, E['_output'] | undefined> {
+    const isDiff = view.getUint8(target.byteOffset)
+    target.byteOffset += 1
+    if (isDiff) {
+      return this.mapCodec.decodeFrom(view, target)
+    }
+    else {
+      return this.arrayCodec.decodeFrom(view, target) as any
+    }
+  }
+
+  encodeInto(value: (Iterable<E['_input'] | undefined>) | Map<number, E['_input'] | undefined>, view: DataView, byteOffset: number): number {
+    let written = 0
+    const isDiff = value instanceof Map
+    view.setUint8(byteOffset + written, isDiff ? 1 : 0)
+    written += 1
+    if (isDiff) {
+      written += this.mapCodec.encodeInto(value, view, byteOffset + written)
+    }
+    else {
+      written += this.arrayCodec.encodeInto(value as any, view, byteOffset + written)
+    }
+    return written
+  }
+
+  sizeOf(value: (Iterable<E['_input'] | undefined>) | Map<number, E['_input'] | undefined>, byteOffset: number) {
+    let size = 0
+    size += 1
+    if (value instanceof Map) {
+      size += this.mapCodec.sizeOf(value, byteOffset + size)
+    }
+    else {
+      size += this.arrayCodec.sizeOf(value as any, byteOffset + size)
+    }
+    return size
+  }
 
 }
 
@@ -47,22 +104,23 @@ export class ProperteaArray<
 >
   extends ProxyProperty<
     ArrayProxyInterface<Element['_T'], Stored>,
-    Extension
+    Extension,
+    Iterable<Element['_T']> | undefined
   >
 {
 
-  codec: ReturnType<typeof crunchesArray>
+  codec: ProperteaArrayCodec<Element['codec']>
   decorate: ProxyDecorator<ArrayProxyInterface<Element['_T'], Stored>, Extension> | undefined
   element: Element
 
   constructor(
-    { element, length = 0 }: { element: Element; length?: number },
+    { element }: { element: Element },
     decorate?: ProxyDecorator<ArrayProxyInterface<Element['_T'], Stored>, Extension>,
   ) {
     super();
     this.decorate = decorate
     this.element = element
-    this.codec = crunchesArray({ element: element.codec, length })
+    this.codec = new ProperteaArrayCodec({ element: element.codec })
   }
 
   concrete(
@@ -82,26 +140,18 @@ export class ProperteaArray<
         this[Initialize](defaultValue);
       }
 
-      [ProperteaSet](value: Iterable<[number, Element['_T']]>): void {
+      [ProperteaSet](value: Map<number, Element['_T'] | undefined>): void {
         for (const [k, v] of value) {
           this.setAt(k, v)
         }
       }
 
-      [Initialize](value?: Iterable<Element['_T']> | ArrayDiff<Element['_T']>): void {
-        if (!value || 'object' !== typeof value) {
-          return;
-        }
-        if (Symbol.iterator in value) {
-          this.setLength(0);
+      [Initialize](value?: Iterable<Element['_T']>): void {
+        this.setLength(0);
+        if (value) {
           let i = 0;
           for (const elm of value) {
             this.setAt(i++, elm);
-          }
-        }
-        else {
-          for (const key in value) {
-            this.setAt(parseInt(key), value[key]);
           }
         }
       }
@@ -116,7 +166,7 @@ export class ProperteaArray<
     }
 
     interface ArrayProxy {
-      [Diff](): Iterable<[any, any]> | undefined
+      [Diff](): Map<number, Element['_T'] | undefined> | undefined
       [MarkClean](): void
       [ToJSON](): Element['_T'][]
       dirty: Set<number> | undefined
@@ -178,13 +228,13 @@ export class ProperteaArray<
         }
         this.$$array.length = length;
       }
-      ArrayProxy.prototype[Diff] = function() {
-        const entries: [number, any][] = [];
+      ArrayProxy.prototype[Diff] = function(): Map<number, Element['_T'] | undefined> {
+        const entries: Map<number, Element['_T'] | undefined> = new Map()
         for (const dirty of this.dirty!) {
           const v = this.$$array[dirty];
-          entries.push([dirty, undefined === v ? undefined : v[Diff]()])
+          entries.set(dirty, undefined === v ? undefined : v[Diff]())
         }
-        return entries;
+        return entries
       };
       ArrayProxy.prototype[MarkClean] = function() {
         this.dirty!.clear();
@@ -215,12 +265,12 @@ export class ProperteaArray<
           onDirtyCallback(key, this);
         }
       }
-      ArrayProxy.prototype[Diff] = function() {
-        const entries: [number, any][] = [];
+      ArrayProxy.prototype[Diff] = function(): Map<number, Element['_T'] | number> {
+        const entries: Map<number, Element['_T'] | undefined> = new Map()
         for (const dirty of this.dirty!) {
-          entries.push([dirty, this.$$array[dirty]])
+          entries.set(dirty, this.$$array[dirty])
         }
-        return entries;
+        return entries
       };
       ArrayProxy.prototype[MarkClean] = function() {
         this.dirty!.clear();
