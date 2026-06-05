@@ -3,7 +3,7 @@ import { expect, test } from 'vitest';
 import { array } from './array.ts';
 import { object } from './object.ts';
 import { uint8 } from  './primitives.js';
-import { Diff, MarkClean, Set, SetWithDefaults, ToJSON } from './proxy.js';
+import { Diff, Initialize, MarkClean, Set, ToJSON } from './proxy.js';
 
 test('default value', () => {
   const property = array({
@@ -11,7 +11,7 @@ test('default value', () => {
   }).default([1, 2, 3]);
   const Proxy = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Proxy(0);
-  expect(proxy[Diff]()).toEqual({0: 1, 1: 2, 2: 3});
+  expect(proxy[Diff]()).toEqual([[0, 1], [1, 2], [2, 3]]);
 });
 
 test('primitive', () => {
@@ -22,7 +22,7 @@ test('primitive', () => {
   const proxy = new Proxy(0);
   proxy.setAt(0, 1);
   expect(proxy.at(0)).toEqual(1);
-  expect(proxy[Diff]()).toEqual({0: 1});
+  expect(proxy[Diff]()).toEqual([[0, 1]]);
 });
 
 test('proxy', () => {
@@ -36,18 +36,18 @@ test('proxy', () => {
   const first = proxy.at(0);
   expect(proxy.at(0)).not.toBe(value);
   expect(proxy.at(0)![ToJSON]()).toEqual(value);
-  proxy[Set]([{x: 5}, {x: 6}]);
+  proxy[Set]([[0, {x: 5}], [1, {x: 6}]]);
   const second = proxy.at(0);
   const third = proxy.at(1);
   expect(first).toBe(second);
   expect(proxy[ToJSON]()).toEqual([{x: 5}, {x: 6}]);
-  expect(proxy[Diff]()).toEqual({0: {x: 5}, 1: {x: 6}});
-  proxy[Set]([{x: 7}]);
+  expect(proxy[Diff]()).toEqual([[0, {x: 5}], [1, {x: 6}]]);
+  proxy[Initialize]([{x: 7}]);
   const fourth = proxy.at(0);
   expect(fourth).toBe(first);
-  expect(proxy[Diff]()).toEqual({0: {x: 7}, 1: undefined});
+  expect(proxy[Diff]()).toEqual([[0, {x: 7}], [1, undefined]]);
   proxy[MarkClean]();
-  expect(proxy[Diff]()).toEqual({});
+  expect(proxy[Diff]()).toEqual([]);
   proxy.setAt(1, {x: 5});
   expect(proxy.at(1)).toBe(third);
 });
@@ -59,12 +59,12 @@ test('within', () => {
   const Proxy = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Proxy(0);
   const value = [1, 2, 3];
-  proxy.x[Set](value);
+  proxy.x[Initialize](value);
   expect(proxy.x[ToJSON]()).not.toBe(value);
   expect(proxy.x[ToJSON]()).toEqual(value);
   proxy.x[MarkClean]();
   proxy.x.setAt(1, 3);
-  expect(proxy[Diff]()).toEqual({x: {1: 3}});
+  expect(proxy[Diff]()).toEqual({x: [[1, 3]]});
 });
 
 test('set diff', () => {
@@ -75,8 +75,8 @@ test('set diff', () => {
   const proxy = new Proxy(0);
   proxy.setAt(0, 1);
   proxy.setAt(1, 2);
-  proxy[Set]({2: 3});
-  expect(proxy[Diff]()).toEqual({0: 1, 1: 2, 2: 3});
+  proxy[Set]([[2, 3]]);
+  expect(proxy[Diff]()).toEqual([[0, 1], [1, 2], [2, 3]]);
 });
 
 test('set with defaults', () => {
@@ -89,9 +89,9 @@ test('set with defaults', () => {
     onDirty: () => { dirties += 1; }
   });
   const proxy = new Proxy(0);
-  proxy[SetWithDefaults]([1, 2, 3]);
+  proxy[Initialize]([1, 2, 3]);
   expect(dirties).toEqual(3);
-  expect(proxy[Diff]()).toEqual({0: 1, 1: 2, 2: 3});
+  expect(proxy[Diff]()).toEqual([[0, 1], [1, 2], [2, 3]]);
 });
 
 test('reactivity', () => {
@@ -109,8 +109,8 @@ test('reactivity', () => {
   expect(dirties).toEqual(1);
   proxy.setAt(1, 2);
   expect(dirties).toEqual(2);
-  proxy[Set]({2: 3});
-  expect(proxy[Diff]()).toEqual({0: 1, 1: 2, 2: 3});
+  proxy[Set]([[2, 3]]);
+  expect(proxy[Diff]()).toEqual([[0, 1], [1, 2], [2, 3]]);
 });
 
 test('reactivity (proxy)', () => {
@@ -143,7 +143,7 @@ test('remove element', () => {
   proxy.setAt(0, 1);
   proxy.setAt(1, 2);
   proxy.setAt(1, undefined);
-  expect(proxy[Diff]()).toEqual({0: 1, 1: undefined});
+  expect(proxy[Diff]()).toEqual([[0, 1], [1, undefined]]);
 });
 
 test('remove element (proxy)', () => {
@@ -157,10 +157,10 @@ test('remove element (proxy)', () => {
   expect(proxy.pool.freeList.length).toEqual(0);
   proxy.setAt(1, undefined);
   expect(proxy.pool.freeList.length).toEqual(1);
-  expect(proxy[Diff]()).toEqual({0: {x: 1}, 1: undefined});
+  expect(proxy[Diff]()).toEqual([[0, {x: 1}], [1, undefined]]);
   proxy.setAt(1, {x: 3});
   expect(proxy.pool.freeList.length).toEqual(0);
-  expect(proxy[Diff]()).toEqual({0: {x: 1}, 1: {x: 3}});
+  expect(proxy[Diff]()).toEqual([[0, {x: 1}], [1, {x: 3}]]);
 });
 
 test('decoration', () => {

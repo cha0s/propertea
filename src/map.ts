@@ -4,12 +4,12 @@ import { Pool } from './pool.js';
 import { Propertea } from './propertea.ts'
 import {
   Diff,
+  Initialize,
   MarkClean,
   type ProxyCreatorConcreteConfiguration,
   type ProxyMixedCreator,
   ProxyProperty,
   Set as ProperteaSet,
-  SetWithDefaults,
   ToJSON,
   ToJSONWithoutDefaults,
   type ProxyDecorator,
@@ -31,7 +31,7 @@ interface MapProxyInterface<K, V, Stored = V> {
   [ToJSON](): MapEntry<K, V>[]
   [ToJSONWithoutDefaults](defaults?: any): MapEntry<K, V>[] | undefined
   [ProperteaSet](value?: MapSettable<K, V>): void
-  [SetWithDefaults](value?: MapSettable<K, V>): void
+  [Initialize](value?: MapSettable<K, V>): void
   clear(): void
   delete(key: K): void
   get(key: K): Stored | undefined
@@ -76,8 +76,7 @@ export class ProperteaMap<
 
     const { defaultValue, valueProperty } = this;
     const { dirtyByteWidth } = valueProperty;
-    const onDirty = configuration.onDirty ?? true;
-    const onDirtyCallback = 'function' === typeof onDirty ? onDirty : nop;
+    const onDirtyCallback = configuration.onDirty ?? nop;
 
     class MapProxy {
       $$map: Map<Key['_T'], Value['_T']> = new Map()
@@ -97,7 +96,7 @@ export class ProperteaMap<
           this.set(entry[0], entry[1]);
         }
       }
-      [SetWithDefaults](value?: MapSettable<Key['_T'], Value['_T']>): void {
+      [Initialize](value?: MapSettable<Key['_T'], Value['_T']>): void {
         this[ProperteaSet](value)
       }
       clear() {
@@ -114,10 +113,10 @@ export class ProperteaMap<
     }
 
     interface MapProxy {
-      [Diff](): Record<string, any> | undefined
+      [Diff](): Iterable<[any, any]> | undefined
       [MarkClean](): void
       [ProperteaSet](value?: MapSettable<Key['_T'], Value['_T']>): void
-      [SetWithDefaults](value?: MapSettable<Key['_T'], Value['_T']>): void
+      [Initialize](value?: MapSettable<Key['_T'], Value['_T']>): void
       [ToJSON](): MapEntry<Key['_T'], Value>[]
       [ToJSONWithoutDefaults](defaults?: any): MapEntry<Key['_T'], Value>[] | undefined
       pool: any
@@ -134,7 +133,7 @@ export class ProperteaMap<
       }
       const pool = new Pool(
         valueProperty,
-        onDirty ? {
+        {
           onDirty: (bit, proxy) => {
             onDirtyCallback(bit, proxy);
             const index = Math.floor(bit / dirtyByteWidth);
@@ -145,7 +144,7 @@ export class ProperteaMap<
               }
             }
           },
-        } : undefined,
+        },
       );
       MapProxy.prototype[ToJSON] = function(): MapEntry<Key['_T'], Value['_T']>[] {
         const json: any[] = [];
@@ -176,7 +175,7 @@ export class ProperteaMap<
         }
       }
       MapProxy.prototype[Diff] = function() {
-        const entries = [];
+        const entries: [any, any][] = [];
         for (const dirty of this.dirty) {
           const v = this.get(dirty);
           // recursively generate diff
@@ -207,18 +206,16 @@ export class ProperteaMap<
         this.dirty.add(key);
         this.$$map.set(key, value);
       }
-      if (configuration.onDirty ?? true) {
-        MapProxy.prototype[Diff] = function() {
-          const entries = [];
-          for (const dirty of this.dirty) {
-            entries.push([dirty, this.$$map.get(dirty)]);
-          }
-          return entries;
-        };
-        MapProxy.prototype[MarkClean] = function() {
-          this.dirty.clear();
-        };
-      }
+      MapProxy.prototype[Diff] = function() {
+        const entries: [any, any][] = [];
+        for (const dirty of this.dirty) {
+          entries.push([dirty, this.$$map.get(dirty)]);
+        }
+        return entries;
+      };
+      MapProxy.prototype[MarkClean] = function() {
+        this.dirty.clear();
+      };
     }
     return (
       this.decorate

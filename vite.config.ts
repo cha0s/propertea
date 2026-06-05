@@ -14,6 +14,9 @@ export default defineConfig({
       fileName: 'index',
       formats: ['es'],
     },
+    rolldownOptions: {
+      external: ['crunches'],
+    },
     sourcemap: true,
     target: 'es2023',
   },

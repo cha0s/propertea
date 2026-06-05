@@ -4,12 +4,12 @@ import { Pool } from './pool.js';
 import { Propertea } from './propertea.ts'
 import {
   Diff,
+  Initialize,
   MarkClean,
   type ProxyCreatorConcreteConfiguration,
   type ProxyMixedCreator,
   ProxyProperty,
   Set as ProperteaSet,
-  SetWithDefaults,
   ToJSON,
   ToJSONWithoutDefaults,
   type ProxyDecorator,
@@ -29,8 +29,8 @@ interface ArrayProxyInterface<T, Stored = T> {
   dirty: Set<number> | undefined
   pool: any
 
-  [ProperteaSet](value?: Iterable<T> | ArrayDiff<T>): void
-  [SetWithDefaults](value?: Iterable<T> | ArrayDiff<T>): void
+  [ProperteaSet](value: Iterable<[number, T]>): void
+  [Initialize](value?: Iterable<T> | ArrayDiff<T>): void
   [ToJSON](): T[]
   [ToJSONWithoutDefaults](defaults?: any): T[] | undefined
 
@@ -79,10 +79,16 @@ export class ProperteaArray<
 
       constructor() {
         this.dirty = new Set<number>();
-        this[ProperteaSet](defaultValue);
+        this[Initialize](defaultValue);
       }
 
-      [ProperteaSet](value?: Iterable<Element['_T']> | ArrayDiff<Element['_T']>): void {
+      [ProperteaSet](value: Iterable<[number, Element['_T']]>): void {
+        for (const [k, v] of value) {
+          this.setAt(k, v)
+        }
+      }
+
+      [Initialize](value?: Iterable<Element['_T']> | ArrayDiff<Element['_T']>): void {
         if (!value || 'object' !== typeof value) {
           return;
         }
@@ -100,10 +106,6 @@ export class ProperteaArray<
         }
       }
 
-      [SetWithDefaults](value?: Iterable<Element['_T']> | ArrayDiff<Element['_T']>): void {
-        this[ProperteaSet](value)
-      }
-
       [ToJSONWithoutDefaults](_defaults?: any): Element['_T'][] | undefined {
         return this[ToJSON]()
       }
@@ -114,7 +116,7 @@ export class ProperteaArray<
     }
 
     interface ArrayProxy {
-      [Diff](): Record<string, any> | undefined
+      [Diff](): Iterable<[any, any]> | undefined
       [MarkClean](): void
       [ToJSON](): Element['_T'][]
       dirty: Set<number> | undefined
@@ -130,7 +132,7 @@ export class ProperteaArray<
       }
       const pool = new Pool(
         element,
-        configuration.onDirty ? {
+        {
           onDirty: (bit, proxy) => {
             onDirtyCallback(bit, proxy);
             const index = Math.floor(bit / dirtyByteWidth);
@@ -141,7 +143,7 @@ export class ProperteaArray<
               }
             }
           },
-        } : undefined,
+        },
       );
       ArrayProxy.prototype.pool = pool
       ArrayProxy.prototype.setAt = function(key: number, value: DeepPartial<Element['_T']> | undefined) {
@@ -177,11 +179,10 @@ export class ProperteaArray<
         this.$$array.length = length;
       }
       ArrayProxy.prototype[Diff] = function() {
-        const entries: Record<number, any> = {};
+        const entries: [number, any][] = [];
         for (const dirty of this.dirty!) {
           const v = this.$$array[dirty];
-          // recursively generate diff
-          entries[dirty] = undefined === v ? undefined : v[Diff]();
+          entries.push([dirty, undefined === v ? undefined : v[Diff]()])
         }
         return entries;
       };
@@ -215,9 +216,9 @@ export class ProperteaArray<
         }
       }
       ArrayProxy.prototype[Diff] = function() {
-        const entries: Record<number, any> = {};
+        const entries: [number, any][] = [];
         for (const dirty of this.dirty!) {
-          entries[dirty] = this.$$array[dirty];
+          entries.push([dirty, this.$$array[dirty]])
         }
         return entries;
       };

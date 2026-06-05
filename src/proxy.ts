@@ -4,14 +4,14 @@ export const Diff = Symbol('Propertea.Diff');
 export const Instance = Symbol('Propertea.Instance');
 export const MarkClean = Symbol('Propertea.MarkClean');
 export const Set = Symbol('Propertea.Set');
-export const SetWithDefaults = Symbol('Propertea.SetWithDefaults');
+export const Initialize = Symbol('Propertea.Initialize');
 export const ToJSON = Symbol('Propertea.ToJSON');
 export const ToJSONWithoutDefaults = Symbol('Propertea.ToJSONWithoutDefaults');
 
 export interface ProxyClass {
-  [Diff](): Record<string, any> | undefined
+  [Diff](): object | undefined
   [Set](value?: never): void
-  [SetWithDefaults](value?: never): void
+  [Initialize](value?: never): void
   [MarkClean](): void
   [ToJSON](): Record<string, any>
   [ToJSONWithoutDefaults](defaults?: never): Record<string, any> | undefined

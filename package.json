@@ -1,6 +1,6 @@
 {
   "author": "cha0s",
-  "dependencies": {
+  "peerDependencies": {
     "crunches": "^3.0.1"
   },
   "devDependencies": {

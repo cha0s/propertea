@@ -1,8 +1,8 @@
 import { type DeepPartial } from './internal-types.ts';
 import {
+  Initialize,
   MarkClean,
   ProxyProperty,
-  SetWithDefaults,
   type ProxyMixed,
   type ProxyMixedCreator,
   type ProxyOnDirtyCallback,
@@ -104,7 +104,7 @@ export class Pool<
     // set and initialize
     this.proxies[proxy[Index]] = proxy;
     initialize?.(proxy);
-    proxy[SetWithDefaults](value);
+    proxy[Initialize](value);
     return proxy;
   }
 

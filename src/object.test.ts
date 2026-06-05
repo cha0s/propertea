@@ -2,7 +2,7 @@ import { expect, test } from 'vitest'
 
 import { object } from './object.ts'
 import { uint8, string } from './primitives.ts';
-import { Diff, Set, SetWithDefaults, ToJSON, ToJSONWithoutDefaults } from './proxy.ts';
+import { Diff, Initialize, Set, ToJSON, ToJSONWithoutDefaults } from './proxy.ts';
 
 test('concrete', () => {
   const property = object({ x: uint8() });
@@ -93,7 +93,7 @@ test('mapped onDirty', () => {
   const Proxy = property.mapped({ data, dirty, onDirty: () => { dirties += 1; } });
   expect(dirties).toEqual(0);
   const proxy = new Proxy(0);
-  proxy[SetWithDefaults]();
+  proxy[Initialize]();
   expect(dirties).toEqual(4);
   dirties = 0;
   proxy.x = 2;
@@ -228,7 +228,7 @@ test('default value', () => {
   }).default({y: 2, z: 3});
   const Proxy = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Proxy(0);
-  proxy[SetWithDefaults]();
+  proxy[Initialize]();
   expect(proxy[ToJSON]()).toEqual({x: 1, y: 2, z: 3, a: 0});
 });
 

@@ -3,6 +3,7 @@ import { object as crunchesObject, type CrunchesType } from 'crunches'
 import type { DeepPartial } from './internal-types.ts';
 import {
   Diff,
+  Initialize,
   Instance,
   MarkClean,
   type ProxyCreatorConcreteConfiguration,
@@ -12,7 +13,6 @@ import {
   type ProxyMixedCreator,
   ProxyProperty,
   Set,
-  SetWithDefaults,
   ToJSON,
   ToJSONWithoutDefaults,
 } from './proxy.js';
@@ -224,7 +224,7 @@ export class ProperteaObject<
     }
     interface ObjectProxy {
       [Set](value?: DeepPartial<ProperteaObjectShape<P>>): void
-      [SetWithDefaults](value?: DeepPartial<ProperteaObjectShape<P>>): void
+      [Initialize](value?: DeepPartial<ProperteaObjectShape<P>>): void
     }
     return codegen(`
       const {
@@ -277,7 +277,7 @@ export class ProperteaObject<
               .join('\n')
           }
         }
-        [SetWithDefaults](value) {
+        [Initialize](value) {
           if (value) {
             ${
               Object.keys(properties).map((key) => `{
@@ -293,7 +293,7 @@ export class ProperteaObject<
                 }
                 ${
                   properties[key] instanceof ProxyProperty
-                    ? `this['${key}'][SetWithDefaults](localValue);`
+                    ? `this['${key}'][Initialize](localValue);`
                     : `this['${key}'] = localValue;`
                 }
               }`).join('\n')
@@ -311,7 +311,7 @@ export class ProperteaObject<
                 }
                 ${
                   properties[key] instanceof ProxyProperty
-                    ? `this['${key}'][SetWithDefaults](localValue);`
+                    ? `this['${key}'][Initialize](localValue);`
                     : `this['${key}'] = localValue;`
                 }
               }`).join('\n')
@@ -332,13 +332,13 @@ export class ProperteaObject<
       DataOffset,
       defaults,
       DirtyOffset,
+      Initialize,
       Instance,
       onDirtyCallback: configuration.onDirty ?? nop,
       properties,
       property: this,
       ObjectProxy,
       Set,
-      SetWithDefaults,
     }) as ObjectProxy;
   }
 
