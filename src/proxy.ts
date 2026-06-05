@@ -9,7 +9,7 @@ export const ToJSON = Symbol('Propertea.ToJSON');
 export const ToJSONWithoutDefaults = Symbol('Propertea.ToJSONWithoutDefaults');
 
 export interface ProxyClass {
-  [Diff](): object | undefined
+  [Diff](): any
   [Set](value?: never): void
   [Initialize](value?: never): void
   [MarkClean](): void
