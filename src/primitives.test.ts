@@ -38,7 +38,7 @@ test('boolean', () => {
     expect(propertea().default(2).defaultValue).toEqual(2)
   })
   test(`mapped ${propertea.name}`, () => {
-    const { typedArray } = propertea().codec
+    const { typedArray } = propertea().codec.inner
     const property = object({
       x: propertea(),
       y: propertea(),
@@ -64,7 +64,7 @@ test('boolean', () => {
     expect(propertea().default(2n).defaultValue).toEqual(2n);
   })
   test(`mapped ${propertea.name}`, () => {
-    const { typedArray } = propertea().codec
+    const { typedArray } = propertea().codec.inner
     const property = object({
       x: propertea(),
       y: propertea(),

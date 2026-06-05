@@ -1,11 +1,11 @@
-import { CrunchesType } from 'crunches'
+import { CrunchesOptional, CrunchesType } from 'crunches'
 
 export abstract class Propertea<T, Default = T extends object ? Partial<T> : T> {
 
   declare _T: T
 
   byteWidth = 0;
-  abstract codec: CrunchesType<unknown>
+  abstract codec: CrunchesOptional<CrunchesType<unknown>>
   defaultValue: Default | undefined
   dirtyByteWidth = 1;
 

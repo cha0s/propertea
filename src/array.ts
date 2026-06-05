@@ -1,4 +1,4 @@
-import { CrunchesArray, CrunchesMap, CrunchesType, CrunchesVarInt, type Target } from 'crunches'
+import { CrunchesArray, CrunchesMap, CrunchesOptional, CrunchesType, CrunchesVarInt, type Target } from 'crunches'
 
 import { Pool } from './pool.js';
 import { Propertea } from './propertea.ts'
@@ -109,7 +109,7 @@ export class ProperteaArray<
   >
 {
 
-  codec: ProperteaArrayCodec<Element['codec']>
+  codec: CrunchesOptional<ProperteaArrayCodec<Element['codec']['inner']>>
   decorate: ProxyDecorator<ArrayProxyInterface<Element['_T'], Stored>, Extension> | undefined
   element: Element
 
@@ -120,7 +120,7 @@ export class ProperteaArray<
     super();
     this.decorate = decorate
     this.element = element
-    this.codec = new ProperteaArrayCodec({ element: element.codec })
+    this.codec = new ProperteaArrayCodec({ element: element.codec.inner }).optional()
   }
 
   concrete(

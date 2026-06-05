@@ -1,4 +1,4 @@
-import { map as crunchesMap } from 'crunches'
+import { CrunchesMap, CrunchesOptional } from 'crunches'
 
 import { Pool } from './pool.js';
 import { Propertea } from './propertea.ts'
@@ -53,7 +53,7 @@ export class ProperteaMap<
   >
 {
 
-  codec: ReturnType<typeof crunchesMap>
+  codec: CrunchesOptional<CrunchesMap<Key['codec']['inner'], Value['codec']['inner']>>
   decorate: ProxyDecorator<MapProxyInterface<Key['_T'], Value['_T'], Stored>, Extension> | undefined
   keyProperty: Key
   valueProperty: Value
@@ -66,7 +66,7 @@ export class ProperteaMap<
     this.decorate = decorate
     this.keyProperty = key
     this.valueProperty = value
-    this.codec = crunchesMap({ key: key.codec, value: value.codec })
+    this.codec = new CrunchesMap({ key: key.codec.inner, value: value.codec.inner }).optional()
   }
 
   concrete(

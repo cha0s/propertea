@@ -50,7 +50,7 @@ export class ProperteaObject<
   extends ProxyProperty<ProperteaObjectShape<P>, Decorator>
 {
 
-  codec: CrunchesObject<any>
+  codec: CrunchesOptional<CrunchesObject<any>>
   decorate: ProxyDecorator<ProperteaObjectShape<ProperteaObjectProps>, Decorator> | undefined
   properties: P
 
@@ -70,13 +70,13 @@ export class ProperteaObject<
       // augment with instance symbol
       defineProperty(propertea, Instance, Symbol(`Propertea.object.property.${key}`))
       // map codecs
-      codecProperties[key] = propertea.codec.optional()
+      codecProperties[key] = propertea.codec
       // accumulate widths
       byteWidths.push(propertea.byteWidth);
       dirtyByteWidth += propertea.dirtyByteWidth;
     }
     // store codec and computed widths
-    this.codec = new CrunchesObject(codecProperties)
+    this.codec = new CrunchesObject(codecProperties).optional()
     this.byteWidth = byteWidths.some((w) => 0 === w) ? 0 : byteWidths.reduce((l, r) => l + r, 0);
     this.dirtyByteWidth = dirtyByteWidth;
   }
