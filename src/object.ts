@@ -116,7 +116,7 @@ export class ProperteaObject<
                       if (previous !== value) {
                         const bit = ${dirtyIndex} + this[DirtyOffset];
                         configuration.dirty[bit >> 3] |= 1 << (bit & 7);
-                        ${isRoot ? `onDirtyCallback(bit, this);` : ''}
+                        onDirtyCallback(bit, this);
                       }
                     }
                   `
@@ -395,7 +395,7 @@ export class ProperteaObject<
                         if (previous !== value) {
                           const bit = ${dirtyIndex} + this[DirtyOffset];
                           configuration.dirty[bit >> 3] |= 1 << (bit & 7);
-                          ${isRoot ? 'onDirtyCallback(bit, this);' : ''}
+                          onDirtyCallback(bit, this);
                         }
                       }
                     `

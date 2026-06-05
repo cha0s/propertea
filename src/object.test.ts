@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 
 import { object } from './object.ts'
 import { uint8, string } from './primitives.ts';
@@ -24,13 +24,16 @@ test('concrete shapeless', () => {
 
 test('nested', () => {
   const property = object({
-    o: object({ x: uint8() }),
+    o: object({ x: object({ y: uint8() }) }),
   });
-  const Proxy = property.concrete({ dirty: new Uint8Array(1) });
+  const onDirty = vi.fn()
+  const Proxy = property.concrete({ dirty: new Uint8Array(1), onDirty });
   const proxy = new Proxy(0);
-  expect(proxy).toMatchObject({o: {x: 0}});
-  proxy.o.x = 12;
-  expect(proxy).toMatchObject({o: {x: 12}});
+  expect(proxy).toMatchObject({o: {x: {y: 0}}});
+  expect(onDirty).toHaveBeenCalledTimes(1)
+  proxy.o.x.y = 12;
+  expect(onDirty).toHaveBeenCalledTimes(2)
+  expect(proxy).toMatchObject({o: {x: {y: 12}}});
 });
 
 test('dirty', () => {
