@@ -100,18 +100,19 @@ export class ProperteaObject<
         const {[Instance]: symbol = Symbol.for('Propertea.object.root')} = property;
         return class ConcreteProxy extends Proxy {
           ${Object.entries(properties).map(([key, property]) => {
+            const sanitizedKey = JSON.stringify(key)
             const props = `
-              get ['${key}']() { return this[symbol]['${key}']; }
+              get [${sanitizedKey}]() { return this[symbol][${sanitizedKey}]; }
               ${
                 property instanceof ProxyProperty
                   ? `
-                    set ['${key}'](value) { this[symbol]['${key}'][Set](value); }
+                    set [${sanitizedKey}](value) { this[symbol][${sanitizedKey}][Set](value); }
                   `
                   : `
-                    set ['${key}'](value) {
+                    set [${sanitizedKey}](value) {
                       // remember
-                      const previous = this[symbol]['${key}'];
-                      this[symbol]['${key}'] = value;
+                      const previous = this[symbol][${sanitizedKey}];
+                      this[symbol][${sanitizedKey}] = value;
                       // dirty if different
                       if (previous !== value) {
                         const bit = ${dirtyIndex} + this[DirtyOffset];
@@ -240,7 +241,7 @@ export class ProperteaObject<
             ${
               Object.entries(properties)
                 .filter(([, property]) => property instanceof ProxyProperty)
-                .map(([key]) => `'${key}': undefined`).join(',')
+                .map(([key]) => `${JSON.stringify(key)}: undefined`).join(',')
             }
           };
           let dataOffset = ${
@@ -255,7 +256,7 @@ export class ProperteaObject<
               .map((key) => {
                 const isProxy = properties[key] instanceof ProxyProperty;
                 return `{
-                  const key = '${key}';
+                  const key = ${JSON.stringify(key)};
                   ${
                     // assign defaults; either values or new proxy instances
                     isProxy
@@ -273,48 +274,61 @@ export class ProperteaObject<
           if (!value) return;
           ${
             Object.keys(properties)
-              .map((key) => `if ('${key}' in value) { this['${key}'] = value['${key}']; }`)
+              .map((key) => {
+                const sanitizedKey = JSON.stringify(key)
+                return `if (${sanitizedKey} in value) { this[${sanitizedKey}] = value[${sanitizedKey}]; }`
+              })
               .join('\n')
           }
         }
         [Initialize](value) {
           if (value) {
             ${
-              Object.keys(properties).map((key) => `{
-                let localValue;
-                if ('${key}' in value) {
-                  localValue = value['${key}'];
-                }
-                else if (defaultValue && '${key}' in defaultValue) {
-                  localValue = defaultValue['${key}'];
-                }
-                else {
-                  localValue = properties['${key}'].defaultValue;
-                }
-                ${
-                  properties[key] instanceof ProxyProperty
-                    ? `this['${key}'][Initialize](localValue);`
-                    : `this['${key}'] = localValue;`
-                }
-              }`).join('\n')
+              Object.keys(properties).map((key) => {
+                const sanitizedKey = JSON.stringify(key)
+                return `
+                  {
+                    let localValue;
+                    if (${sanitizedKey} in value) {
+                      localValue = value[${sanitizedKey}];
+                    }
+                    else if (defaultValue && ${sanitizedKey} in defaultValue) {
+                      localValue = defaultValue[${sanitizedKey}];
+                    }
+                    else {
+                      localValue = properties[${sanitizedKey}].defaultValue;
+                    }
+                    ${
+                      properties[key] instanceof ProxyProperty
+                        ? `this[${sanitizedKey}][Initialize](localValue);`
+                        : `this[${sanitizedKey}] = localValue;`
+                    }
+                  }
+                `
+              }).join('\n')
             }
           }
           else {
             ${
-              Object.keys(properties).map((key) => `{
-                let localValue;
-                if (defaultValue && '${key}' in defaultValue) {
-                  localValue = defaultValue['${key}'];
-                }
-                else {
-                  localValue = properties['${key}'].defaultValue;
-                }
-                ${
-                  properties[key] instanceof ProxyProperty
-                    ? `this['${key}'][Initialize](localValue);`
-                    : `this['${key}'] = localValue;`
-                }
-              }`).join('\n')
+              Object.keys(properties).map((key) => {
+                const sanitizedKey = JSON.stringify(key)
+                return `
+                  {
+                    let localValue;
+                    if (defaultValue && ${sanitizedKey} in defaultValue) {
+                      localValue = defaultValue[${sanitizedKey}];
+                    }
+                    else {
+                      localValue = properties[${sanitizedKey}].defaultValue;
+                    }
+                    ${
+                      properties[key] instanceof ProxyProperty
+                        ? `this[${sanitizedKey}][Initialize](localValue);`
+                        : `this[${sanitizedKey}] = localValue;`
+                    }
+                  }
+                `
+              }).join('\n')
             }
           }
           let bit = this[DirtyOffset];
@@ -365,15 +379,16 @@ export class ProperteaObject<
             let dataIndex = 0;
             let dirtyIndex = 0;
             return Object.entries(properties).map(([key, property]) => {
+              const sanitizedKey = JSON.stringify(key)
               const props = `
                 ${
                   property instanceof ProxyProperty
                   ? `
-                    get ['${key}']() { return this[symbol]['${key}']; }
+                    get [${sanitizedKey}]() { return this[symbol][${sanitizedKey}]; }
                   `
                   : `
-                    get ['${key}']() {
-                      return properties['${key}'].codec.decodeFrom(configuration.data, {
+                    get [${sanitizedKey}]() {
+                      return properties[${sanitizedKey}].codec.decodeFrom(configuration.data, {
                         byteOffset: this[DataOffset] + ${dataIndex},
                       });
                     }
@@ -382,12 +397,12 @@ export class ProperteaObject<
                 ${
                   property instanceof ProxyProperty
                     ? `
-                      set ['${key}'](value) { this[symbol]['${key}'][Set](value); }
+                      set [${sanitizedKey}](value) { this[symbol][${sanitizedKey}][Set](value); }
                     `
                     : `
-                      set ['${key}'](value) {
-                        const previous = this['${key}'];
-                        properties['${key}'].codec.encodeInto(
+                      set [${sanitizedKey}](value) {
+                        const previous = this[${sanitizedKey}];
+                        properties[${sanitizedKey}].codec.encodeInto(
                           value,
                           configuration.data,
                           this[DataOffset] + ${dataIndex},
@@ -401,8 +416,8 @@ export class ProperteaObject<
                     `
                 }
               `;
-              dataIndex += property.byteWidth;
-              dirtyIndex += property.dirtyByteWidth;
+              dataIndex += Number(property.byteWidth)
+              dirtyIndex += Number(property.dirtyByteWidth)
               return props;
             }).join('\n')
 
