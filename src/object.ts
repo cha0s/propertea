@@ -67,8 +67,6 @@ export class ProperteaObject<
     for (const key in properties) {
       const propertea = properties[key]
       this.properties[key] = propertea
-      // augment with instance symbol
-      defineProperty(propertea, Instance, Symbol(`Propertea.object.property.${key}`))
       // map codecs
       codecProperties[key] = propertea.codec
       // accumulate widths
@@ -79,6 +77,9 @@ export class ProperteaObject<
     this.codec = new CrunchesObject(codecProperties).optional()
     this.byteWidth = byteWidths.some((w) => 0 === w) ? 0 : byteWidths.reduce((l, r) => l + r, 0);
     this.dirtyByteWidth = dirtyByteWidth;
+    // augment with instance symbol
+    defineProperty(this, Instance, Symbol('Propertea.object.root'))
+
   }
   concrete(
     configuration: ProxyCreatorConcreteConfiguration,
@@ -97,7 +98,7 @@ export class ProperteaObject<
     let dirtyIndex = 0;
     const Base = codegen(
       `
-        const {[Instance]: symbol = Symbol.for('Propertea.object.root')} = property;
+        const {[Instance]: symbol} = property;
         return class ConcreteProxy extends Proxy {
           ${Object.entries(properties).map(([key, property]) => {
             const sanitizedKey = JSON.stringify(key)
@@ -232,7 +233,7 @@ export class ProperteaObject<
         byteWidth,
         defaultValue,
         dirtyByteWidth,
-        [Instance]: symbol = Symbol.for('Propertea.object.root'),
+        [Instance]: symbol,
       } = property;
       return class FixedObjectProxy extends ObjectProxy {
         constructor(dataIndex, dirtyIndex) {
@@ -373,7 +374,7 @@ export class ProperteaObject<
     // apply blueprint proxy
     const Base = codegen(
       `
-        const {[Instance]: symbol = Symbol.for('Propertea.object.root')} = property;
+        const {[Instance]: symbol} = property;
         return class MappedProxy extends Proxy {
           ${(() => {
             let dataIndex = 0;
