@@ -53,7 +53,7 @@ export class ProperteaMap<
   >
 {
 
-  codec: CrunchesOptional<CrunchesMap<Key['codec']['inner'], Value['codec']['inner']>>
+  codec: CrunchesOptional<CrunchesMap<Key['codec']['inner'], Value['codec']['inner'], true>>
   decorate: ProxyDecorator<MapProxyInterface<Key['_T'], Value['_T'], Stored>, Extension> | undefined
   keyProperty: Key
   valueProperty: Value
@@ -66,7 +66,7 @@ export class ProperteaMap<
     this.decorate = decorate
     this.keyProperty = key
     this.valueProperty = value
-    this.codec = new CrunchesMap({ key: key.codec.inner, value: value.codec.inner }).optional()
+    this.codec = new CrunchesMap({ key: key.codec.inner, value: value.codec.inner, sparse: true }).optional()
   }
 
   concrete(
