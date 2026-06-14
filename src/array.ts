@@ -153,8 +153,10 @@ export class ProperteaArray<
       }
 
       [ProperteaSet](value: Map<number, Element['_T'] | undefined>): void {
-        for (const [k, v] of value) {
-          this.setAt(k, v)
+        if (value) {
+          for (const [k, v] of value) {
+            this.setAt(k, v)
+          }
         }
       }
 
