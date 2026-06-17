@@ -34,8 +34,11 @@ interface ArrayProxyInterface<Element extends Propertea<unknown>, Stored = Eleme
   [ToJSON](): Element['_T'][]
   [ToJSONWithoutDefaults](defaults?: any): Element['_T'][] | undefined
 
+  [Symbol.iterator](): Iterator<Element['_T']>
+
   at(key: number): Stored | undefined
   get length(): number
+  includes(value: Element['_T']): boolean
   setAt(key: number, value: Element['_T'] | undefined): void
   setLength(length: number): void
 
@@ -198,8 +201,16 @@ export class ProperteaArray<
         return this[ToJSON]()
       }
 
+      [Symbol.iterator]() {
+        return this.$$array.values()
+      }
+
       at(key: number) {
         return this.$$array[key]
+      }
+
+      includes(value: Element['_T']) {
+        return this.$$array.includes(value)
       }
 
       get length() {
