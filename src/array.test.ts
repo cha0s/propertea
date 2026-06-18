@@ -1,8 +1,9 @@
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
 
 import { array } from './array.ts';
 import { object } from './object.ts';
-import { uint8 } from  './primitives.js';
+import { Pool } from './pool.ts';
+import { uint8, uint32 } from  './primitives.js';
 import { Diff, Initialize, MarkClean, Set, ToJSON } from './proxy.js';
 
 test('default value', () => {
@@ -12,6 +13,26 @@ test('default value', () => {
   const Proxy = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Proxy(0);
   expect(proxy[Diff]()).toEqual({ 0: 1, 1: 2, 2: 3 })
+});
+
+test('element default value (primitive)', () => {
+  const property = array({
+    element: uint8().default(6),
+  });
+  const Proxy = property.concrete({ dirty: new Uint8Array(1) });
+  const proxy = new Proxy(0);
+  proxy.setLength(2)
+  expect(proxy[Diff]()).toEqual({ 0: 6, 1: 6 })
+});
+
+test('element default value (proxy)', () => {
+  const property = array({
+    element: object({ x: uint8() }).default({ x: 42 }),
+  });
+  const Proxy = property.concrete({ dirty: new Uint8Array(1) });
+  const proxy = new Proxy(0);
+  proxy.setLength(2)
+  expect(proxy[Diff]()).toEqual({ 0: { x: 42 }, 1: { x: 42 } })
 });
 
 test('primitive', () => {
@@ -94,6 +115,20 @@ test('set with defaults', () => {
   expect(proxy[Diff]()).toEqual({ 0: 1, 1: 2, 2: 3 })
 });
 
+test('set proxy element', () => {
+  const property = array({
+    element: object({ x: uint8().default(2), y: uint8().default(3) }),
+  });
+  const Proxy = property.concrete({
+    dirty: new Uint8Array(1),
+  });
+  const proxy = new Proxy(0);
+  proxy.setAt(0, { x: 1, y: 2 })
+  proxy.setAt(0, JSON.parse(JSON.stringify({ x: 42 })))
+  expect(proxy.at(0)!.x).toEqual(42);
+  expect(proxy.at(0)!.y).toEqual(2);
+});
+
 test('reactivity', () => {
   let dirties = 0;
   const property = array({
@@ -154,12 +189,12 @@ test('remove element (proxy)', () => {
   const proxy = new Proxy(0);
   proxy.setAt(0, {x: 1});
   proxy.setAt(1, {x: 2});
-  expect(proxy.pool.freeList.length).toEqual(0);
+  expect(proxy.$$pool.freeList.length).toEqual(0);
   proxy.setAt(1, undefined);
-  expect(proxy.pool.freeList.length).toEqual(1);
+  expect(proxy.$$pool.freeList.length).toEqual(1);
   expect(proxy[Diff]()).toEqual({ 0: { x: 1 }, 1: undefined })
   proxy.setAt(1, {x: 3});
-  expect(proxy.pool.freeList.length).toEqual(0);
+  expect(proxy.$$pool.freeList.length).toEqual(0);
   expect(proxy[Diff]()).toEqual({ 0: { x: 1 }, 1: { x: 3 }})
 });
 
@@ -171,4 +206,60 @@ test('decoration', () => {
   const Proxy = property.concrete({ dirty: new Uint8Array(1) });
   const proxy = new Proxy(0);
   expect(proxy.foo()).to.equal(42)
+});
+
+test('dirty bits (proxy)', () => {
+  const property = object({
+    pad: uint32(),
+    foo: array({ element: object({ a: uint8(), b: uint8() }) }),
+  })
+  const onDirty = vi.fn()
+  const pool = new Pool(property, {
+    onDirty,
+  })
+  const first = pool.allocate()
+  expect(onDirty).toHaveBeenNthCalledWith(1, 0, first)
+  expect(onDirty).toHaveBeenNthCalledWith(2, 1, first)
+  const second = pool.allocate()
+  expect(onDirty).toHaveBeenNthCalledWith(3, 2, second)
+  expect(onDirty).toHaveBeenNthCalledWith(4, 3, second)
+  pool.free(first)
+  second.foo.setAt(0, { a: 1, b: 2 })
+  expect(onDirty).toHaveBeenNthCalledWith(5, 3, second.foo)
+  expect(onDirty).toHaveBeenNthCalledWith(6, 3, second.foo)
+  second.foo.at(0)!.b = 3
+  expect(onDirty).toHaveBeenNthCalledWith(7, 3, second.foo)
+  second.foo.setLength(0)
+  expect(onDirty).toHaveBeenNthCalledWith(8, 3, second.foo)
+  second.foo.setLength(0)
+  expect(onDirty).toHaveBeenCalledTimes(8)
+  second.foo.setLength(1)
+  expect(onDirty).toHaveBeenCalledTimes(10)
+});
+
+test('dirty bits (primitive)', () => {
+  const property = object({
+    pad: uint32(),
+    foo: array({ element: uint32() }),
+  })
+  const onDirty = vi.fn()
+  const pool = new Pool(property, {
+    onDirty,
+  })
+  const first = pool.allocate()
+  expect(onDirty).toHaveBeenNthCalledWith(1, 0, first)
+  expect(onDirty).toHaveBeenNthCalledWith(2, 1, first)
+  const second = pool.allocate()
+  expect(onDirty).toHaveBeenNthCalledWith(3, 2, second)
+  expect(onDirty).toHaveBeenNthCalledWith(4, 3, second)
+  pool.free(first)
+  second.foo.setAt(0, 5)
+  expect(onDirty).toHaveBeenNthCalledWith(5, 3, second.foo)
+  second.foo.setLength(0)
+  expect(onDirty).toHaveBeenNthCalledWith(6, 3, second.foo)
+  second.foo.setLength(0)
+  expect(onDirty).toHaveBeenCalledTimes(6)
+  second.foo.setLength(1)
+  expect(onDirty).toHaveBeenNthCalledWith(7, 3, second.foo)
+  expect(onDirty).toHaveBeenCalledTimes(7)
 });

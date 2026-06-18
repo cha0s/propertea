@@ -17,15 +17,14 @@ import {
 } from './proxy.js';
 import { type DeepPartial } from './internal-types.ts';
 
-const ArraySymbol = Symbol('Propertea.array.Array');
 const Key = Symbol('Propertea.array.Index');
 
 const nop = () => {};
 
 interface ArrayProxyInterface<Element extends Propertea<unknown>, Stored = Element['_T']> {
 
-  dirty: Set<number> | undefined
-  pool: any
+  dirty: Set<number>
+  $$pool: any
 
   [Diff](): ProperteaArrayDiff<Element['codec']['inner']> | undefined
   [MarkClean](): void
@@ -162,15 +161,42 @@ export class ProperteaArray<
     isRoot = true,
   ) {
     const { defaultValue, element } = this;
-    const { dirtyByteWidth } = element;
+    const { byteWidth, dirtyByteWidth } = element;
     const onDirtyCallback = configuration.onDirty ?? nop;
 
     class ArrayProxy {
 
       $$array: Element['_T'][] = []
+      $$dataOffset: number
+      $$dirtyOffset: number
+      $$pool: any
 
-      constructor() {
+      constructor(indexOrDataOffset: number, dirtyOffset?: number) {
+        this.$$dataOffset = isRoot ? indexOrDataOffset * byteWidth : indexOrDataOffset
+        this.$$dirtyOffset = isRoot ? indexOrDataOffset * dirtyByteWidth : dirtyOffset!
         this.dirty = new Set<number>();
+        if (element instanceof ProxyProperty) {
+          const arrayProxy = this
+          const pool = new Pool(
+            element,
+            {
+              onDirty: (bit) => {
+                onDirtyCallback(this.$$dirtyOffset, arrayProxy);
+                const index = Math.floor(bit / dirtyByteWidth);
+                if (index < pool.length.value) {
+                  const proxy = pool.proxies[index] as any
+                  if (proxy) {
+                    arrayProxy.dirty.add(proxy[Key]);
+                  }
+                }
+              },
+            },
+          ) as any
+          pool.ProxyCreator = class extends pool.ProxyCreator {
+            [Key]: number | undefined = undefined;
+          }
+          this.$$pool = pool
+        }
         this[Initialize](defaultValue);
       }
 
@@ -223,51 +249,25 @@ export class ProperteaArray<
       [Diff](): ProperteaArrayDiff<Element['codec']['inner']> | undefined
       [MarkClean](): void
       [ToJSON](): Element['_T'][]
-      dirty: Set<number> | undefined
-      pool: any
+      dirty: Set<number>
       setAt(key: number, value: Element['_T'] | undefined): void
       setLength(length: number): void
     }
 
     if (element instanceof ProxyProperty) {
-      const Concrete = class extends element.concrete(configuration, isRoot) {
-        [Key]: number | undefined = undefined;
-        [ArraySymbol]: ArrayProxy | undefined = undefined;
-      }
-      const pool = new Pool(
-        element,
-        {
-          onDirty: (bit, proxy) => {
-            onDirtyCallback(bit, proxy);
-            const index = Math.floor(bit / dirtyByteWidth);
-            if (index < pool.length.value) {
-              const proxy = pool.proxies[index] as any
-              if (proxy) {
-                proxy[ArraySymbol].dirty.add(proxy[Key]);
-              }
-            }
-          },
-        },
-      );
-      ArrayProxy.prototype.pool = pool
       ArrayProxy.prototype.setAt = function(key: number, value: DeepPartial<Element['_T']> | undefined) {
         if (undefined === value && key in this.$$array) {
-          pool.free(this.$$array[key]);
+          this.$$pool.free(this.$$array[key]);
         }
         this.dirty?.add(key);
         let localValue;
         if (this.$$array[key]) {
-          (this.$$array[key] as typeof element['_T'])[ProperteaSet](
-            value instanceof Concrete
-              ? (value as typeof element['_T'])[ToJSON]()
-              : value
-          );
+          (this.$$array[key] as typeof element['_T'])[ProperteaSet](value);
           localValue = this.$$array[key];
         }
         else {
-          localValue = pool.allocate(value, (proxy: any) => {
+          localValue = this.$$pool.allocate(value, (proxy: any) => {
             proxy[Key] = key;
-            proxy[ArraySymbol] = this;
           });
         }
         if (undefined !== value) {
@@ -276,9 +276,18 @@ export class ProperteaArray<
         this.$$array[key] = value;
       }
       ArrayProxy.prototype.setLength = function(length: number) {
+        const { length: oldLength } = this.$$array
         for (let i = this.$$array.length - 1; i >= length; --i) {
-          pool.free(this.$$array[i]);
+          this.$$pool.free(this.$$array[i]);
           this.dirty?.add(i);
+        }
+        for (let i = this.$$array.length; i < length; ++i) {
+          this.$$array[i] = this.$$pool.allocate(element.defaultValue, (proxy: any) => {
+            proxy[Key] = i;
+          });
+        }
+        if (length < oldLength) {
+          onDirtyCallback(this.$$dirtyOffset, this);
         }
         this.$$array.length = length;
       }
@@ -306,8 +315,15 @@ export class ProperteaArray<
     }
     else {
       ArrayProxy.prototype.setLength = function(length: number) {
+        const { length: oldLength } = this.$$array
         for (let i = this.$$array.length - 1; i >= length; --i) {
           this.dirty?.add(i);
+        }
+        for (let i = this.$$array.length; i < length; ++i) {
+          this.setAt(i, element.defaultValue);
+        }
+        if (length < oldLength) {
+          onDirtyCallback(this.$$dirtyOffset, this);
         }
         this.$$array.length = length;
       }
@@ -316,7 +332,7 @@ export class ProperteaArray<
         const previous = this.$$array[key];
         this.$$array[key] = value;
         if (previous !== value) {
-          onDirtyCallback(key, this);
+          onDirtyCallback(this.$$dirtyOffset, this);
         }
       }
       ArrayProxy.prototype[Diff] = function(): ProperteaArrayDiff<Element['codec']['inner']> {
