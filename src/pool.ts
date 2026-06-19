@@ -60,7 +60,11 @@ export class Pool<
     }
     const {onDirty} = params ?? {};
     this.property = property;
-    this.views.onDirty = onDirty;
+    const { dirtyByteWidth } = property
+    this.views.onDirty = (bit) => {
+      const index = Math.floor(bit / dirtyByteWidth)
+      onDirty?.(bit, this.proxies[index])
+    }
     const method = property.isMappable ? 'mapped' : 'concrete'
     this.ProxyCreator = class extends property[method](this.views, true) {
       [Index]: number

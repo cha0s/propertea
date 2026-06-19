@@ -3,7 +3,9 @@ import { CrunchesMap, CrunchesOptional } from 'crunches'
 import { Pool } from './pool.js';
 import { Propertea } from './propertea.ts'
 import {
+  DataOffset,
   Diff,
+  DirtyOffset,
   Initialize,
   MarkClean,
   type ProxyCreatorConcreteConfiguration,
@@ -16,7 +18,8 @@ import {
   type ProxyMixed,
 } from './proxy.js';
 
-const Key = Symbol('Index');
+const Key = Symbol('Propertea.map.Index');
+const MapSymbol = Symbol('Propertea.map.Symbol');
 
 type MapKey = number | string
 
@@ -77,37 +80,38 @@ export class ProperteaMap<
     const { byteWidth, dirtyByteWidth } = valueProperty;
     const onDirtyCallback = configuration.onDirty ?? nop;
 
+    let pool: any
+    if (valueProperty instanceof ProxyProperty) {
+      pool = new Pool(
+        valueProperty,
+        {
+          onDirty: (bit) => {
+            const index = Math.floor(bit / dirtyByteWidth);
+            if (index < pool.length.value) {
+              const proxy = pool.proxies[index] as any
+              if (proxy) {
+                onDirtyCallback(proxy[MapSymbol][DirtyOffset], proxy[MapSymbol]);
+                proxy[MapSymbol].dirty.add(proxy[Key]);
+              }
+            }
+          },
+        },
+      ) as any
+      pool.ProxyCreator = class extends pool.ProxyCreator {
+        ;[MapSymbol]: MapProxy | undefined = undefined
+        ;[Key]: number | undefined = undefined
+      }
+    }
+
     class MapProxy {
-      $$dataOffset: number
-      $$dirtyOffset: number
+      ;[DataOffset]: number
+      ;[DirtyOffset]: number
       $$map: Map<Key['_T'], Value['_T']> = new Map()
-      $$pool: any
+      $$pool: any = pool
       dirty = new Set<Key['_T']>();
       constructor(indexOrDataOffset: number, dirtyOffset?: number) {
-        this.$$dataOffset = isRoot ? indexOrDataOffset * byteWidth : indexOrDataOffset
-        this.$$dirtyOffset = isRoot ? indexOrDataOffset * dirtyByteWidth : dirtyOffset!
-        if (valueProperty instanceof ProxyProperty) {
-          const mapProxy = this
-          const pool = new Pool(
-            valueProperty,
-            {
-              onDirty: (bit) => {
-                onDirtyCallback(this.$$dirtyOffset, mapProxy);
-                const index = Math.floor(bit / dirtyByteWidth);
-                if (index < pool.length.value) {
-                  const proxy = pool.proxies[index] as any
-                  if (proxy) {
-                    mapProxy.dirty.add(proxy[Key]);
-                  }
-                }
-              },
-            },
-          ) as any
-          pool.ProxyCreator = class extends pool.ProxyCreator {
-            [Key]: number | undefined = undefined;
-          }
-          this.$$pool = pool
-        }
+        this[DataOffset] = isRoot ? indexOrDataOffset * byteWidth : indexOrDataOffset
+        this[DirtyOffset] = isRoot ? indexOrDataOffset * dirtyByteWidth : dirtyOffset!
         this[Initialize](defaultValue);
       }
       [Symbol.iterator]() {
@@ -164,13 +168,13 @@ export class ProperteaMap<
           this.$$map.delete(key);
           this.dirty.add(key);
         }
-        onDirtyCallback(this.$$dirtyOffset, this);
+        onDirtyCallback(this[DirtyOffset], this);
       }
       MapProxy.prototype.delete = function(key: Key['_T']) {
         if (this.$$map.has(key)) {
           this.$$pool.free(this.get(key));
           this.$$map.delete(key);
-          onDirtyCallback(this.$$dirtyOffset, this);
+          onDirtyCallback(this[DirtyOffset], this);
           this.dirty.add(key);
         }
       }
@@ -181,6 +185,7 @@ export class ProperteaMap<
         }
         else {
           const localValue = this.$$pool.allocate(value, (proxy: any) => {
+            proxy[MapSymbol] = this
             proxy[Key] = key;
           });
           this.$$map.set(key, localValue)
@@ -218,13 +223,13 @@ export class ProperteaMap<
           this.$$map.delete(key);
           this.dirty.add(key);
         }
-        onDirtyCallback(this.$$dirtyOffset, this);
+        onDirtyCallback(this[DirtyOffset], this);
       }
       MapProxy.prototype.delete = function(key: Key['_T']) {
         if (this.$$map.has(key)) {
           this.dirty.add(key);
           this.$$map.delete(key);
-          onDirtyCallback(this.$$dirtyOffset, this);
+          onDirtyCallback(this[DirtyOffset], this);
         }
       }
       MapProxy.prototype.set = function(key: Key['_T'], value: Value['_T']) {
@@ -232,7 +237,7 @@ export class ProperteaMap<
         this.dirty.add(key);
         this.$$map.set(key, value);
         if (previous !== value) {
-          onDirtyCallback(this.$$dirtyOffset, this);
+          onDirtyCallback(this[DirtyOffset], this);
         }
       }
       MapProxy.prototype[Diff] = function() {

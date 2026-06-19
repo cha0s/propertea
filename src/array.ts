@@ -3,7 +3,9 @@ import { CrunchesArray, CrunchesMap, CrunchesOptional, CrunchesType, CrunchesVar
 import { Pool } from './pool.js';
 import { Propertea } from './propertea.ts'
 import {
+  DataOffset,
   Diff,
+  DirtyOffset,
   Initialize,
   MarkClean,
   type ProxyCreatorConcreteConfiguration,
@@ -18,6 +20,7 @@ import {
 import { type DeepPartial } from './internal-types.ts';
 
 const Key = Symbol('Propertea.array.Index');
+const ArraySymbol = Symbol('Propertea.array.Symbol');
 
 const nop = () => {};
 
@@ -164,39 +167,40 @@ export class ProperteaArray<
     const { byteWidth, dirtyByteWidth } = element;
     const onDirtyCallback = configuration.onDirty ?? nop;
 
+    let pool: any
+    if (element instanceof ProxyProperty) {
+      pool = new Pool(
+        element,
+        {
+          onDirty: (bit) => {
+            const index = Math.floor(bit / dirtyByteWidth);
+            if (index < pool.length.value) {
+              const proxy = pool.proxies[index] as any
+              if (proxy) {
+                onDirtyCallback(proxy[ArraySymbol][DirtyOffset], proxy[ArraySymbol]);
+                proxy[ArraySymbol].dirty.add(proxy[Key]);
+              }
+            }
+          },
+        },
+      ) as any
+      pool.ProxyCreator = class extends pool.ProxyCreator {
+        ;[Key]: number | undefined = undefined
+        ;[ArraySymbol]: ArrayProxy | undefined = undefined
+      }
+    }
+
     class ArrayProxy {
 
+      ;[DataOffset]: number
+      ;[DirtyOffset]: number
       $$array: Element['_T'][] = []
-      $$dataOffset: number
-      $$dirtyOffset: number
-      $$pool: any
+      $$pool: any = pool
 
       constructor(indexOrDataOffset: number, dirtyOffset?: number) {
-        this.$$dataOffset = isRoot ? indexOrDataOffset * byteWidth : indexOrDataOffset
-        this.$$dirtyOffset = isRoot ? indexOrDataOffset * dirtyByteWidth : dirtyOffset!
+        this[DataOffset] = isRoot ? indexOrDataOffset * byteWidth : indexOrDataOffset
+        this[DirtyOffset] = isRoot ? indexOrDataOffset * dirtyByteWidth : dirtyOffset!
         this.dirty = new Set<number>();
-        if (element instanceof ProxyProperty) {
-          const arrayProxy = this
-          const pool = new Pool(
-            element,
-            {
-              onDirty: (bit) => {
-                onDirtyCallback(this.$$dirtyOffset, arrayProxy);
-                const index = Math.floor(bit / dirtyByteWidth);
-                if (index < pool.length.value) {
-                  const proxy = pool.proxies[index] as any
-                  if (proxy) {
-                    arrayProxy.dirty.add(proxy[Key]);
-                  }
-                }
-              },
-            },
-          ) as any
-          pool.ProxyCreator = class extends pool.ProxyCreator {
-            [Key]: number | undefined = undefined;
-          }
-          this.$$pool = pool
-        }
         this[Initialize](defaultValue);
       }
 
@@ -268,6 +272,7 @@ export class ProperteaArray<
         else {
           localValue = this.$$pool.allocate(value, (proxy: any) => {
             proxy[Key] = key;
+            proxy[ArraySymbol] = this
           });
         }
         if (undefined !== value) {
@@ -284,10 +289,11 @@ export class ProperteaArray<
         for (let i = this.$$array.length; i < length; ++i) {
           this.$$array[i] = this.$$pool.allocate(element.defaultValue, (proxy: any) => {
             proxy[Key] = i;
+            proxy[ArraySymbol] = this
           });
         }
         if (length < oldLength) {
-          onDirtyCallback(this.$$dirtyOffset, this);
+          onDirtyCallback(this[DirtyOffset], this);
         }
         this.$$array.length = length;
       }
@@ -323,7 +329,7 @@ export class ProperteaArray<
           this.setAt(i, element.defaultValue);
         }
         if (length < oldLength) {
-          onDirtyCallback(this.$$dirtyOffset, this);
+          onDirtyCallback(this[DirtyOffset], this);
         }
         this.$$array.length = length;
       }
@@ -332,7 +338,7 @@ export class ProperteaArray<
         const previous = this.$$array[key];
         this.$$array[key] = value;
         if (previous !== value) {
-          onDirtyCallback(this.$$dirtyOffset, this);
+          onDirtyCallback(this[DirtyOffset], this);
         }
       }
       ArrayProxy.prototype[Diff] = function(): ProperteaArrayDiff<Element['codec']['inner']> {

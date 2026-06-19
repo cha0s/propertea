@@ -2,7 +2,9 @@ import { CrunchesObject, CrunchesOptional, type CrunchesType } from 'crunches'
 
 import type { DeepPartial } from './internal-types.ts';
 import {
+  DataOffset,
   Diff,
+  DirtyOffset,
   Initialize,
   Instance,
   MarkClean,
@@ -17,9 +19,6 @@ import {
   ToJSONWithoutDefaults,
 } from './proxy.js';
 import { Propertea } from './propertea.ts'
-
-const DataOffset = Symbol('Propertea.object.DataOffset');
-const DirtyOffset = Symbol('Propertea.object.DirtyOffset');
 
 export type ProperteaObjectProps = Record<string, Propertea<unknown>>
 

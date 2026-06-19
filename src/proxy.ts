@@ -1,6 +1,8 @@
 import { Propertea } from './propertea.ts';
 
+export const DataOffset = Symbol('Propertea.DataOffset');
 export const Diff = Symbol('Propertea.Diff');
+export const DirtyOffset = Symbol('Propertea.DirtyOffset');
 export const Instance = Symbol('Propertea.Instance');
 export const MarkClean = Symbol('Propertea.MarkClean');
 export const Set = Symbol('Propertea.Set');
@@ -9,7 +11,9 @@ export const ToJSON = Symbol('Propertea.ToJSON');
 export const ToJSONWithoutDefaults = Symbol('Propertea.ToJSONWithoutDefaults');
 
 export interface ProxyClass {
+  [DataOffset]: number
   [Diff](): any
+  [DirtyOffset]: number
   [Set](value?: never): void
   [Initialize](value?: never): void
   [MarkClean](): void
