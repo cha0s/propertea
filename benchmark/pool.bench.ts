@@ -14,7 +14,7 @@ const pool = new Pool(object({
       z: float32().default(123),
     }),
   }),
-}));
+}), { useWasm: true });
 
 type TestPool = typeof pool
 

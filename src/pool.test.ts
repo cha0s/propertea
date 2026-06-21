@@ -110,7 +110,7 @@ interface WasmTestExports extends Record<string, any> {
 test('wasm', async () => {
   const pool = new Pool(object({
     z: float32(),
-  }));
+  }), { useWasm: true });
   const samples = [];
   for (let i = 0; i < 10; ++i) {
     const sample = Math.random();

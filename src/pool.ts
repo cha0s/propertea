@@ -1,4 +1,5 @@
 import { type DeepPartial } from './internal-types.ts';
+import { Memory, type TrackedMemory } from './memory.ts';
 import {
   Initialize,
   MarkClean,
@@ -22,17 +23,12 @@ type PoolViews = {
 
 export class Pool<
   Prop extends ProxyProperty<any>,
+  UseWasm extends boolean = any,
 > {
 
-  data = {
-    memory: new WebAssembly.Memory({initial: 0}),
-    nextGrow: 0,
-  };
+  data: TrackedMemory<UseWasm>
 
-  dirty = {
-    memory: new WebAssembly.Memory({initial: 0}),
-    nextGrow: 0,
-  };
+  dirty: TrackedMemory<UseWasm>
 
   freeList: (PoolProxyMixed<Prop>)[] = [];
 
@@ -53,17 +49,26 @@ export class Pool<
     property: Prop,
     params?: {
       onDirty?: ProxyOnDirtyCallback
+      useWasm?: UseWasm
     }
   ) {
     if (!(property instanceof ProxyProperty)) {
       throw new TypeError(`Propertea(pool): not a proxy property`);
     }
-    const {onDirty} = params ?? {};
+    const { useWasm = false, onDirty } = params ?? {};
     this.property = property;
     const { dirtyByteWidth } = property
     this.views.onDirty = (bit) => {
       const index = Math.floor(bit / dirtyByteWidth)
       onDirty?.(bit, this.proxies[index])
+    }
+    this.data = {
+      memory: useWasm ? new WebAssembly.Memory({ initial: 0 }) : new Memory() as any,
+      nextGrow: 0,
+    }
+    this.dirty = {
+      memory: useWasm ? new WebAssembly.Memory({ initial: 0 }) : new Memory() as any,
+      nextGrow: 0,
     }
     const method = property.isMappable ? 'mapped' : 'concrete'
     this.ProxyCreator = class extends property[method](this.views, true) {
