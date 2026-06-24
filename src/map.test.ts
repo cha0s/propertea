@@ -159,3 +159,25 @@ test('dirty bits (primitive)', () => {
   second.foo.clear()
   expect(onDirty).toHaveBeenCalledTimes(6)
 });
+
+test('nested decoration', () => {
+  object({
+    s: map({
+      key: uint8(),
+      value: object({
+        t: uint8(),
+      }, (O) => {
+        return class extends O {
+          foo() { return this.t }
+        }
+      })
+    })
+  }, (O) => {
+    return class extends O {
+      bar() {
+        const item = this.s.get(0)
+        return item?.foo()
+      }
+    }
+  })
+})

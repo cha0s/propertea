@@ -46,7 +46,7 @@ export class ProperteaMap<
   Key extends Propertea<MapKey>,
   Value extends Propertea<unknown>,
   Extension extends object = {},
-  Stored = Value extends ProxyProperty<any> ? ProxyMixed<Value['_T']> : Value['_T'],
+  Stored = Value extends ProxyProperty<any> ? ProxyMixed<Value['_T'] & Value['_E']> : Value['_T'],
 >
   extends ProxyProperty<
     MapProxyInterface<Key['_T'], Value['_T'], Stored>,
@@ -261,7 +261,7 @@ export class ProperteaMap<
     }
     return (
       this.decorate
-        ? this.decorate(MapProxy as unknown as new (index: number) => MapProxyInterface<Key['_T'], Value['_T'], Stored>)
+        ? this.decorate(MapProxy as unknown as new (index: number) => ProxyMixed<MapProxyInterface<Key['_T'], Value['_T'], Stored>>)
         : MapProxy
       ) as ProxyMixedCreator<MapProxyInterface<Key['_T'], Value['_T'], Stored> & Extension>
   }
@@ -279,7 +279,7 @@ export function map<
   K extends Propertea<MapKey>,
   V extends Propertea<unknown>,
   E extends object = {},
-  Stored = V extends ProxyProperty<any> ? ProxyMixed<V['_T']> : V['_T'],
+  Stored = V extends ProxyProperty<any> ? ProxyMixed<V['_T'] & V['_E']> : V['_T'],
 >(
   options: { key: K; value: V },
   decorate?: ProxyDecorator<MapProxyInterface<K['_T'], V['_T'], Stored>, E>,

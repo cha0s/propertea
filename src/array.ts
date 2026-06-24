@@ -136,7 +136,7 @@ export class ProperteaArrayCodec<
 export class ProperteaArray<
   Element extends Propertea<unknown>,
   Extension extends object = {},
-  Stored = Element extends ProxyProperty<any> ? ProxyMixed<Element['_T']> : Element['_T'],
+  Stored = Element extends ProxyProperty<any> ? ProxyMixed<Element['_T'] & Element['_E']> : Element['_T'],
 >
   extends ProxyProperty<
     ArrayProxyInterface<Element, Stored>,
@@ -361,7 +361,7 @@ export class ProperteaArray<
     }
     return (
       this.decorate
-        ? this.decorate(ArrayProxy as unknown as new (index: number) => ArrayProxyInterface<Element, Stored>)
+        ? this.decorate(ArrayProxy as unknown as new (index: number) => ProxyMixed<ArrayProxyInterface<Element, Stored>>)
         : ArrayProxy
       ) as ProxyMixedCreator<
         ArrayProxyInterface<Element, Stored> & Extension
@@ -380,7 +380,7 @@ export class ProperteaArray<
 export function array<
   P extends Propertea<unknown>,
   E extends object = {},
-  Stored = P extends ProxyProperty<any> ? ProxyMixed<P['_T']> : P['_T'],
+  Stored = P extends ProxyProperty<any> ? ProxyMixed<P['_T'] & P['_E']> : P['_T'],
 >(
   options: { element: P; length?: number },
   decorate?: ProxyDecorator<ArrayProxyInterface<P, Stored>, E>,

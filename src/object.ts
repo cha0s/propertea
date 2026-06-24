@@ -12,7 +12,6 @@ import {
   type ProxyCreatorMappedConfiguration,
   type ProxyDecorator,
   type ProxyMixed,
-  type ProxyMixedCreator,
   ProxyProperty,
   Set,
   ToJSON,
@@ -24,7 +23,7 @@ export type ProperteaObjectProps = Record<string, Propertea<unknown>>
 
 export type ProperteaObjectShape<Props extends Record<string, Propertea<any>>> = {
   [K in keyof Props]: Props[K] extends ProxyProperty<any>
-    ? ProxyMixed<Props[K]['_T']>
+    ? ProxyMixed<Props[K]['_T'] & Props[K]['_E']>
     : Props[K]['_T']
 }
 
@@ -50,12 +49,12 @@ export class ProperteaObject<
 {
 
   codec: CrunchesOptional<CrunchesObject<any>>
-  decorate: ProxyDecorator<ProperteaObjectShape<ProperteaObjectProps>, Decorator> | undefined
+  decorate: ProxyDecorator<ProperteaObjectShape<P>, Decorator> | undefined
   properties: P
 
   constructor(
     properties: P,
-    decorate?: ProxyDecorator<ProperteaObjectShape<ProperteaObjectProps>, Decorator>,
+    decorate?: ProxyDecorator<ProperteaObjectShape<P>, Decorator>,
   ) {
     super()
     this.decorate = decorate
@@ -138,11 +137,7 @@ export class ProperteaObject<
         Set,
       }
     )
-    return (
-      this.decorate
-        ? this.decorate(Base)
-        : Base
-    ) as ProxyMixedCreator<ProperteaObjectShape<P> & typeof Proxy & Decorator>
+    return this.decorate ? this.decorate(Base) : Base
   }
   generateProxy({
     defaults,
@@ -436,9 +431,7 @@ export class ProperteaObject<
         Set,
       }
     )
-    return (
-      this.decorate ? this.decorate(Base) : Base
-    ) as ProxyMixedCreator<ProperteaObjectShape<P> & Decorator>
+    return this.decorate ? this.decorate(Base) : Base
   }
 
 }
@@ -448,7 +441,7 @@ export function object<
   Decorator extends object = {},
 >(
   properties: P,
-  decorate?: ProxyDecorator<ProperteaObjectShape<ProperteaObjectProps>, Decorator>,
+  decorate?: ProxyDecorator<ProperteaObjectShape<P>, Decorator>,
 ) {
   return new ProperteaObject(properties, decorate)
 }

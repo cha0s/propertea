@@ -245,3 +245,33 @@ test('decoration', () => {
   expect(proxy.x).to.equal(123)
   expect(proxy.foo()).to.equal(42)
 });
+
+test('nested decoration', () => {
+  const property = object(
+    {
+      x: object({
+        y: uint8().default(123),
+      }, (O) => {
+        return class extends O {
+          ;[Initialize](value: any) {
+            super[Initialize](value)
+          }
+          bar() { return this.y + 10 }
+        }
+      }),
+    },
+    (O) => {
+      return class extends O {
+        foo() {
+          return 42
+        }
+      }
+    },
+  );
+  const Proxy = property.concrete({ dirty: new Uint8Array(1) });
+  const proxy = new Proxy(0);
+  expect(proxy.x.y).to.equal(123)
+  expect(proxy.x.bar()).to.equal(133)
+  expect(proxy.foo()).to.equal(42)
+});
+

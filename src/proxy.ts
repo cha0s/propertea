@@ -69,5 +69,5 @@ export abstract class ProxyProperty<
 }
 
 export type ProxyDecorator<T, E extends object> = (
-  C: new (index: number) => T
-) => new (index: number) => T & E
+  C: new (index: number) => ProxyMixed<T>
+) => new (index: number) => ProxyMixed<T> & E
