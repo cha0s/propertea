@@ -121,12 +121,20 @@ export class ProperteaMap<
         if (!value) {
           return;
         }
-        this.clear();
         for (const entry of value) {
-          this.set(entry[0], entry[1]);
+          if (undefined === entry[1]) {
+            this.delete(entry[0])
+          }
+          else {
+            this.set(entry[0], entry[1]);
+          }
         }
       }
       [Initialize](value?: MapSettable<Key['_T'], Value['_T']>): void {
+        if (!value) {
+          return;
+        }
+        this.clear();
         this[ProperteaSet](value)
       }
       get(key: Key['_T']) {
