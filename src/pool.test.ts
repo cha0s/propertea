@@ -133,7 +133,6 @@ test('wasm', async () => {
 
 test('allocation reactivity', () => {
   let dirties = 0;
-
   const pool = new Pool(object({
     o: object({
       x: uint8(),

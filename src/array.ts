@@ -214,16 +214,19 @@ export class ProperteaArray<
 
       [Initialize](value?: Iterable<Element['_T']> | ProperteaArrayDiff<Element['codec']['inner']>): void {
         this.setLength(0);
-        if (value) {
-          if (Symbol.iterator in value) {
-            let i = 0;
-            for (const elm of value) {
-              this.setAt(i++, elm);
-            }
+        // ignore any dirty noise from shrinking an existing array
+        this.dirty!.clear();
+        if (!value) {
+          return
+        }
+        if (Symbol.iterator in value) {
+          let i = 0;
+          for (const elm of value) {
+            this.setAt(i++, elm);
           }
-          else {
-            this[ProperteaSet](value)
-          }
+        }
+        else {
+          this[ProperteaSet](value)
         }
       }
 

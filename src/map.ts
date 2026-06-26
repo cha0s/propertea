@@ -131,10 +131,12 @@ export class ProperteaMap<
         }
       }
       [Initialize](value?: MapSettable<Key['_T'], Value['_T']>): void {
+        this.clear();
         if (!value) {
           return;
         }
-        this.clear();
+        // ignore any dirty noise from shrinking an existing array
+        this.dirty!.clear();
         this[ProperteaSet](value)
       }
       get(key: Key['_T']) {

@@ -135,7 +135,7 @@ export class Pool<
   }
 
   free(proxy: (ProxyMixed<Prop['_T']> & { [Index]: number })) {
-    proxy[MarkClean as any]?.();
+    proxy[MarkClean]?.();
     this.freeList.push(proxy);
     this.proxies[proxy[Index]] = null;
   }

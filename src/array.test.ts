@@ -263,3 +263,15 @@ test('dirty bits (primitive)', () => {
   expect(onDirty).toHaveBeenNthCalledWith(7, 3, second)
   expect(onDirty).toHaveBeenCalledTimes(7)
 });
+
+test('dirty reset on allocation', () => {
+  const property = object({
+    foo: array({ element: object({ a: uint8(), b: uint8() }) }),
+  })
+  const pool = new Pool(property)
+  const first = pool.allocate()
+  first.foo.setAt(0, { a: 1, b: 2 })
+  pool.free(first)
+  const second = pool.allocate()
+  expect(second[Diff]()['foo']).to.deep.equal({})
+});
