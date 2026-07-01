@@ -300,9 +300,10 @@ export class ProperteaArray<
         }
         this.$$array.length = length;
       }
-      ArrayProxy.prototype[Diff] = function(): ProperteaArrayDiff<Element['codec']['inner']> {
+      ArrayProxy.prototype[Diff] = function(): ProperteaArrayDiff<Element['codec']['inner']> | undefined {
+        if (0 === this.dirty.size) { return }
         const diff: ProperteaArrayDiff<Element['codec']['inner']> = {}
-        for (const dirty of this.dirty!) {
+        for (const dirty of this.dirty) {
           const v = this.$$array[dirty];
           diff[dirty] = undefined === v ? undefined : v[Diff]()
         }
@@ -344,7 +345,8 @@ export class ProperteaArray<
           onDirtyCallback(this[DirtyOffset], this);
         }
       }
-      ArrayProxy.prototype[Diff] = function(): ProperteaArrayDiff<Element['codec']['inner']> {
+      ArrayProxy.prototype[Diff] = function(): ProperteaArrayDiff<Element['codec']['inner']> | undefined {
+        if (0 === this.dirty.size) { return }
         const diff: ProperteaArrayDiff<Element['codec']['inner']> = {}
         for (const dirty of this.dirty!) {
           diff[dirty] = this.$$array[dirty]

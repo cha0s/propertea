@@ -68,7 +68,7 @@ test('proxy', () => {
   expect(fourth).toBe(first);
   expect(proxy[Diff]()).toEqual({ 0: { x: 7 }, 1: undefined })
   proxy[MarkClean]();
-  expect(proxy[Diff]()).toEqual({})
+  expect(proxy[Diff]()).toEqual(undefined)
   proxy.setAt(1, {x: 5});
   expect(proxy.at(1)).toBe(third);
 });
@@ -273,5 +273,5 @@ test('dirty reset on allocation', () => {
   first.foo.setAt(0, { a: 1, b: 2 })
   pool.free(first)
   const second = pool.allocate()
-  expect(second[Diff]()['foo']).to.deep.equal({})
+  expect(second[Diff]()).to.deep.equal(undefined)
 });

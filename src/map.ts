@@ -202,6 +202,7 @@ export class ProperteaMap<
         }
       }
       MapProxy.prototype[Diff] = function() {
+        if (0 === this.dirty.size) { return }
         const entries: [any, any][] = [];
         for (const dirty of this.dirty) {
           const v = this.get(dirty);
@@ -251,6 +252,7 @@ export class ProperteaMap<
         }
       }
       MapProxy.prototype[Diff] = function() {
+        if (0 === this.dirty.size) { return }
         const entries: [any, any][] = [];
         for (const dirty of this.dirty) {
           entries.push([dirty, this.$$map.get(dirty)]);

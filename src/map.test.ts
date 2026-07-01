@@ -86,7 +86,7 @@ test('dirty', () => {
   proxy.clear();
   expect(proxy[Diff]()).toEqual([[1, undefined], [2, undefined]]);
   proxy[MarkClean]();
-  expect(proxy[Diff]()).toEqual([]);
+  expect(proxy[Diff]()).toEqual(undefined);
 });
 
 test('dirty nested', () => {
