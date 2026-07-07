@@ -64,13 +64,18 @@ test('proxy', () => {
   expect(proxy[ToJSON]()).toEqual([{x: 5}, {x: 6}]);
   expect(proxy[Diff]()).toEqual({ 0: { x: 5 }, 1: { x: 6 } })
   proxy[Initialize]([{x: 7}]);
-  const fourth = proxy.at(0);
+  const fourth = proxy.at(0)!;
   expect(fourth).toBe(first);
   expect(proxy[Diff]()).toEqual({ 0: { x: 7 }, 1: undefined })
   proxy[MarkClean]();
   expect(proxy[Diff]()).toEqual(undefined)
   proxy.setAt(1, {x: 5});
   expect(proxy.at(1)).toBe(third);
+  proxy[MarkClean]();
+  fourth.x = 54
+  expect(proxy[Diff]()).toEqual({ 0: { x: 54 }})
+  Proxy.markClean();
+  expect(proxy[Diff]()).toEqual(undefined)
 });
 
 test('within', () => {

@@ -132,6 +132,7 @@ export class Pool<
    */
   markClean() {
     new Uint8Array(this.dirty.memory.buffer).fill(0);
+    this.ProxyCreator.markClean?.()
   }
 
   free(proxy: (ProxyMixed<Prop['_T']> & { [Index]: number })) {

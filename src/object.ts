@@ -175,6 +175,14 @@ export class ProperteaObject<
       }
       // @ts-expect-error - set in generated constructor
       [DirtyOffset]: number
+      static markClean() {
+        for (const key in properties) {
+          const property = properties[key];
+          if (property instanceof ProxyProperty) {
+            defaults[key].markClean()
+          }
+        }
+      }
       ;[MarkClean]() {
         let bit = this[DirtyOffset];
         for (const key in properties) {

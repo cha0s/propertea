@@ -1,10 +1,11 @@
 import { expect, test, vi } from 'vitest';
 
+import { array } from './array.ts';
 import { map } from './map.ts';
 import { object } from './object.ts';
 import { Pool } from './pool.ts';
 import { uint8, uint32 } from './primitives.ts';
-import { Diff, MarkClean, ToJSON } from './proxy.js';
+import { Diff, MarkClean, Set, ToJSON } from './proxy.js';
 
 test('primitive', () => {
   const property = map({
@@ -180,4 +181,24 @@ test('nested decoration', () => {
       }
     }
   })
+})
+
+test('nested cleaning', () => {
+  const property = map({
+    key: uint8(),
+    value: object({
+      x: array({
+        element: object({
+          y: array({
+            element: uint8(),
+          })
+        })
+      }),
+    }),
+  });
+  const pool = new Pool(property)
+  const first = pool.allocate()
+  first[Set]([[0, { x: [ { y: [1, 2]} ]}]] as any)
+  pool.markClean()
+  expect(first.get(0)!.x.at(0)!.y[Diff]()).to.equal(undefined)
 })

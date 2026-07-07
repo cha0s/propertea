@@ -31,7 +31,8 @@ export type ProxyMixed<
 export type ProxyMixedCreator<
   T,
 > = (
-  new (indexOrDataOffset: number, dirtyOffset?: number) => ProxyMixed<T>
+  (new (indexOrDataOffset: number, dirtyOffset?: number) => ProxyMixed<T>)
+  & { markClean: () => void }
 )
 
 export type ProxyOnDirtyCallback = (bit: number, proxy?: any) => void
