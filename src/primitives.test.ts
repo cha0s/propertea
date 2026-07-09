@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from 'vitest'
 
 import { object } from './object.ts'
 import {
@@ -42,16 +42,16 @@ test('boolean', () => {
     const property = object({
       x: propertea(),
       y: propertea(),
-    });
-    const data = new typedArray(2);
+    })
+    const data = new typedArray(2)
     const Proxy = property.mapped({
       data: new DataView(data.buffer),
       dirty: new Uint8Array(1),
-    });
-    const proxy = new Proxy(0);
-    proxy.x = 1;
-    proxy.y = 2;
-    expect(data).toEqual(new typedArray([proxy.x, proxy.y]));
+    })
+    const proxy = new Proxy(0)
+    proxy.x = 1
+    proxy.y = 2
+    expect(data).toEqual(new typedArray([proxy.x, proxy.y]))
   })
 })
 
@@ -60,30 +60,30 @@ test('boolean', () => {
   uint64,
 ].forEach((propertea) => {
   test(propertea.name, () => {
-    expect(propertea().defaultValue).toEqual(0n);
-    expect(propertea().default(2n).defaultValue).toEqual(2n);
+    expect(propertea().defaultValue).toEqual(0n)
+    expect(propertea().default(2n).defaultValue).toEqual(2n)
   })
   test(`mapped ${propertea.name}`, () => {
     const { typedArray } = propertea().codec.inner
     const property = object({
       x: propertea(),
       y: propertea(),
-    });
-    const data = new typedArray(2);
+    })
+    const data = new typedArray(2)
     const Proxy = property.mapped({
       data: new DataView(data.buffer),
       dirty: new Uint8Array(1),
-    });
-    const proxy = new Proxy(0);
-    proxy.x = 1n;
-    proxy.y = 2n;
-    expect(data).toEqual(new typedArray([proxy.x, proxy.y]));
+    })
+    const proxy = new Proxy(0)
+    proxy.x = 1n
+    proxy.y = 2n
+    expect(data).toEqual(new typedArray([proxy.x, proxy.y]))
   })
-});
+})
 
 test('string', () => {
-  expect(string().defaultValue).toEqual('');
-  expect(string().default('foobar').defaultValue).toEqual('foobar');
+  expect(string().defaultValue).toEqual('')
+  expect(string().default('foobar').defaultValue).toEqual('foobar')
 })
 
 ;[

@@ -4,10 +4,10 @@ export abstract class Propertea<T, Default = T extends object ? Partial<T> : T> 
 
   declare _T: T
 
-  byteWidth = 0;
+  byteWidth = 0
   abstract codec: CrunchesOptional<CrunchesType<unknown>>
   defaultValue: Default | undefined
-  dirtyByteWidth = 1;
+  dirtyByteWidth = 1
 
   default(value: Default): this {
     this.defaultValue = value
@@ -15,7 +15,7 @@ export abstract class Propertea<T, Default = T extends object ? Partial<T> : T> 
   }
 
   get isMappable() {
-    return this.byteWidth > 0;
+    return this.byteWidth > 0
   }
 
 }

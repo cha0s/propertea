@@ -1,1 +1,1 @@
-declare module "*.wat?multi_memory";
+declare module "*.wat?multi_memory"

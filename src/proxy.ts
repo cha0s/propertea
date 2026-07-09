@@ -1,14 +1,14 @@
-import { Propertea } from './propertea.ts';
+import { Propertea } from './propertea.ts'
 
-export const DataOffset = Symbol('Propertea.DataOffset');
-export const Diff = Symbol('Propertea.Diff');
-export const DirtyOffset = Symbol('Propertea.DirtyOffset');
-export const Instance = Symbol('Propertea.Instance');
-export const MarkClean = Symbol('Propertea.MarkClean');
-export const Set = Symbol('Propertea.Set');
-export const Initialize = Symbol('Propertea.Initialize');
-export const ToJSON = Symbol('Propertea.ToJSON');
-export const ToJSONWithoutDefaults = Symbol('Propertea.ToJSONWithoutDefaults');
+export const DataOffset = Symbol('Propertea.DataOffset')
+export const Diff = Symbol('Propertea.Diff')
+export const DirtyOffset = Symbol('Propertea.DirtyOffset')
+export const Instance = Symbol('Propertea.Instance')
+export const MarkClean = Symbol('Propertea.MarkClean')
+export const Set = Symbol('Propertea.Set')
+export const Initialize = Symbol('Propertea.Initialize')
+export const ToJSON = Symbol('Propertea.ToJSON')
+export const ToJSONWithoutDefaults = Symbol('Propertea.ToJSONWithoutDefaults')
 
 export interface ProxyClass {
   [DataOffset]: number
@@ -21,16 +21,9 @@ export interface ProxyClass {
   [ToJSONWithoutDefaults](defaults?: never): Record<string, any> | undefined
 }
 
-export type ProxyMixed<
-  T,
-> = (
-  & ProxyClass
-  & T
-)
+export type ProxyMixed<T> = ProxyClass & T
 
-export type ProxyMixedCreator<
-  T,
-> = (
+export type ProxyMixedCreator<T> = (
   (new (indexOrDataOffset: number, dirtyOffset?: number) => ProxyMixed<T>)
   & { markClean: () => void }
 )

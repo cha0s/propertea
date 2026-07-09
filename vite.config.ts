@@ -2,10 +2,10 @@ import { resolve } from 'node:path'
 
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
-import { coverageConfigDefaults } from 'vitest/config';
+import { coverageConfigDefaults } from 'vitest/config'
 // @ts-expect-error - no types
-import ViteWabt from 'vite-plugin-wabt';
-import wabt from 'wabt';
+import ViteWabt from 'vite-plugin-wabt'
+import wabt from 'wabt'
 
 export default defineConfig({
   build: {
