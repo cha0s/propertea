@@ -1,4 +1,5 @@
 export * from './array.ts'
+export * from './json.ts'
 export * from './map.ts'
 export * from './memory.ts'
 export * from './object.ts'
