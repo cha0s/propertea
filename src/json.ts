@@ -6,14 +6,15 @@ import {
   DirtyOffset,
   Initialize,
   MarkClean,
+  type ProxyClass,
+  type ProxyCreatorMappedConfiguration,
   type ProxyCreatorConcreteConfiguration,
+  type ProxyDecorator,
   type ProxyMixedCreator,
   ProxyProperty,
   Set as ProperteaSet,
   ToJSON,
   ToJSONWithoutDefaults,
-  type ProxyDecorator,
-  type ProxyCreatorMappedConfiguration,
 } from './proxy.ts'
 
 type AnyObject = Record<string, any>
@@ -42,10 +43,7 @@ function applyPatch<T extends AnyObject, U extends AnyObject>(target: T, source:
   return output
 }
 
-interface JsonProxyInterface {
-
-  [DataOffset]: number
-  [DirtyOffset]: number
+interface JsonProxyInterface extends ProxyClass {
   value: CrunchesJSONOutput
 
   [Diff](): CrunchesJSONOutput | undefined
@@ -53,7 +51,6 @@ interface JsonProxyInterface {
   [Initialize](value?: CrunchesJSONOutput): void
   [ToJSON](): CrunchesJSONOutput
   [ToJSONWithoutDefaults](defaults?: any): CrunchesJSONOutput | undefined
-
 }
 
 export class ProperteaJson<Decorator extends object = {}>

@@ -21,7 +21,7 @@ import { Propertea } from './propertea.ts'
 
 export type ProperteaObjectProps = Record<string, Propertea<unknown>>
 
-export type ProperteaObjectShape<Props extends Record<string, Propertea<any>>> = {
+export type ProperteaObjectProxyInterface<Props extends Record<string, Propertea<any>>> = {
   [K in keyof Props]: Props[K] extends ProxyProperty<any>
     ? ProxyMixed<Props[K]['_T'] & Props[K]['_E']>
     : Props[K]['_T']
@@ -45,16 +45,16 @@ export class ProperteaObject<
   P extends ProperteaObjectProps,
   Decorator extends object = {},
 >
-  extends ProxyProperty<ProperteaObjectShape<P>, Decorator>
+  extends ProxyProperty<ProperteaObjectProxyInterface<P>, Decorator>
 {
 
   codec: CrunchesOptional<CrunchesObject<any>>
-  decorate: ProxyDecorator<ProperteaObjectShape<P>, Decorator> | undefined
+  decorate: ProxyDecorator<ProperteaObjectProxyInterface<P>, Decorator> | undefined
   properties: P
 
   constructor(
     properties: P,
-    decorate?: ProxyDecorator<ProperteaObjectShape<P>, Decorator>,
+    decorate?: ProxyDecorator<ProperteaObjectProxyInterface<P>, Decorator>,
   ) {
     super()
     this.decorate = decorate
@@ -227,8 +227,8 @@ export class ProperteaObject<
       }
     }
     interface ObjectProxy {
-      [Set](value?: DeepPartial<ProperteaObjectShape<P>>): void
-      [Initialize](value?: DeepPartial<ProperteaObjectShape<P>>): void
+      [Set](value?: DeepPartial<ProperteaObjectProxyInterface<P>>): void
+      [Initialize](value?: DeepPartial<ProperteaObjectProxyInterface<P>>): void
     }
     return codegen(`
       const {
@@ -449,7 +449,7 @@ export function object<
   Decorator extends object = {},
 >(
   properties: P,
-  decorate?: ProxyDecorator<ProperteaObjectShape<P>, Decorator>,
+  decorate?: ProxyDecorator<ProperteaObjectProxyInterface<P>, Decorator>,
 ) {
   return new ProperteaObject(properties, decorate)
 }

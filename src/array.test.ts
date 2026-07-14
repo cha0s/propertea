@@ -194,12 +194,13 @@ test('remove element (proxy)', () => {
   const proxy = new Proxy(0)
   proxy.setAt(0, {x: 1})
   proxy.setAt(1, {x: 2})
-  expect(proxy.$$pool.freeList.length).toEqual(0)
+  const { $$pool } = proxy as any
+  expect($$pool.freeList.length).toEqual(0)
   proxy.setAt(1, undefined)
-  expect(proxy.$$pool.freeList.length).toEqual(1)
+  expect($$pool.freeList.length).toEqual(1)
   expect(proxy[Diff]()).toEqual({ 0: { x: 1 }, 1: undefined })
   proxy.setAt(1, {x: 3})
-  expect(proxy.$$pool.freeList.length).toEqual(0)
+  expect($$pool.freeList.length).toEqual(0)
   expect(proxy[Diff]()).toEqual({ 0: { x: 1 }, 1: { x: 3 }})
 })
 

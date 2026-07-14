@@ -8,14 +8,15 @@ import {
   DirtyOffset,
   Initialize,
   MarkClean,
+  type ProxyClass,
   type ProxyCreatorConcreteConfiguration,
+  type ProxyDecorator,
+  type ProxyMixed,
   type ProxyMixedCreator,
   ProxyProperty,
   Set as ProperteaSet,
   ToJSON,
   ToJSONWithoutDefaults,
-  type ProxyDecorator,
-  type ProxyMixed,
 } from './proxy.js'
 import { type DeepPartial } from './internal-types.ts'
 
@@ -25,17 +26,17 @@ const Dirty = Symbol('Propertea.array.Dirty')
 
 const nop = () => {}
 
-interface ArrayProxyInterface<Element extends Propertea<unknown>, Stored = Element['_T']> {
-
-  $$pool: any
+interface ProperteaArrayProxyInterface<
+  Element extends Propertea<any>,
+  Stored = Element['_T']
+> extends ProxyClass {
 
   [Diff](): ProperteaArrayDiff<Element['codec']['inner']> | undefined
-  [MarkClean](): void
-  [ProperteaSet](value: ProperteaArrayDiff<Element['codec']['inner']>): void
   [Initialize](value?: Iterable<Element['_T']>): void
+  [ProperteaSet](value: ProperteaArrayDiff<Element['codec']['inner']>): void
+  [Symbol.iterator](): Iterator<Element['_T']>
   [ToJSON](): Element['_T'][]
   [ToJSONWithoutDefaults](defaults?: any): Element['_T'][] | undefined
-  [Symbol.iterator](): Iterator<Element['_T']>
 
   at(key: number): Stored | undefined
   get length(): number
@@ -138,19 +139,19 @@ export class ProperteaArray<
   Stored = Element extends ProxyProperty<any> ? ProxyMixed<Element['_T'] & Element['_E']> : Element['_T'],
 >
   extends ProxyProperty<
-    ArrayProxyInterface<Element, Stored>,
+    ProperteaArrayProxyInterface<Element, Stored>,
     Extension,
     Iterable<Element['_T']> | undefined
   >
 {
 
   codec: CrunchesOptional<ProperteaArrayCodec<Element['codec']['inner']>>
-  decorate: ProxyDecorator<ArrayProxyInterface<Element, Stored>, Extension> | undefined
+  decorate: ProxyDecorator<ProperteaArrayProxyInterface<Element, Stored>, Extension> | undefined
   element: Element
 
   constructor(
     { element }: { element: Element },
-    decorate?: ProxyDecorator<ArrayProxyInterface<Element, Stored>, Extension>,
+    decorate?: ProxyDecorator<ProperteaArrayProxyInterface<Element, Stored>, Extension>,
   ) {
     super()
     this.decorate = decorate
@@ -252,8 +253,8 @@ export class ProperteaArray<
         return this.$$array.values()
       }
 
-      at(key: number) {
-        return this.$$array[key]
+      at(key: number): Stored {
+        return this.$$array[key] as Stored
       }
 
       includes(value: Element['_T']) {
@@ -266,6 +267,7 @@ export class ProperteaArray<
 
     }
 
+    // dynamic shape
     interface ArrayProxy {
       [Diff](): ProperteaArrayDiff<Element['codec']['inner']> | undefined
       [MarkClean](): void
@@ -377,13 +379,8 @@ export class ProperteaArray<
         return json
       }
     }
-    return (
-      this.decorate
-        ? this.decorate(ArrayProxy as unknown as new (index: number) => ProxyMixed<ArrayProxyInterface<Element, Stored>>)
-        : ArrayProxy
-      ) as ProxyMixedCreator<
-        ArrayProxyInterface<Element, Stored> & Extension
-      >
+    const Decorated = this.decorate ? this.decorate(ArrayProxy) : ArrayProxy
+    return Decorated as ProxyMixedCreator<ProperteaArrayProxyInterface<Element, Stored> & Extension>
   }
 
   mapped(
@@ -401,7 +398,7 @@ export function array<
   Stored = P extends ProxyProperty<any> ? ProxyMixed<P['_T'] & P['_E']> : P['_T'],
 >(
   options: { element: P; length?: number },
-  decorate?: ProxyDecorator<ArrayProxyInterface<P, Stored>, E>,
+  decorate?: ProxyDecorator<ProperteaArrayProxyInterface<P, Stored>, E>,
 ) {
   return new ProperteaArray(options, decorate)
 }

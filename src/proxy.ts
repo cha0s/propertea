@@ -1,5 +1,3 @@
-import { type CrunchesJSONOutput } from 'crunches'
-
 import { Propertea } from './propertea.ts'
 
 export const DataOffset = Symbol('Propertea.DataOffset')
@@ -14,13 +12,13 @@ export const ToJSONWithoutDefaults = Symbol('Propertea.ToJSONWithoutDefaults')
 
 export interface ProxyClass {
   [DataOffset]: number
-  [Diff](): any
+  [Diff](): unknown
   [DirtyOffset]: number
   [Set](value?: unknown): void
   [Initialize](value?: unknown): void
   [MarkClean](): void
-  [ToJSON](): CrunchesJSONOutput
-  [ToJSONWithoutDefaults](defaults?: unknown): CrunchesJSONOutput | undefined
+  [ToJSON](): unknown
+  [ToJSONWithoutDefaults](defaults?: unknown): unknown | undefined
 }
 
 export type ProxyMixed<T> = ProxyClass & T
