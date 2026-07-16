@@ -90,8 +90,8 @@ export class Pool<
       proxy = this.freeList.pop()!
     }
     else {
-      const {data, dirty, views} = this
-      const {length} = this.proxies
+      const { data, dirty, views } = this
+      const { length } = this.proxies
       // allocate more data buffer if we need it
       if (this.property.isMappable && length === data.nextGrow) {
         data.memory.grow(1)
@@ -119,10 +119,10 @@ export class Pool<
 
   wasmImports() {
     return {
-      byte_width: new WebAssembly.Global({value: 'i32'}, this.property.byteWidth),
+      byte_width: new WebAssembly.Global({ value: 'i32' }, this.property.byteWidth),
       data: this.data.memory,
       dirty: this.dirty.memory,
-      dirty_byte_width: new WebAssembly.Global({value: 'i32'}, this.property.dirtyByteWidth),
+      dirty_byte_width: new WebAssembly.Global({ value: 'i32' }, this.property.dirtyByteWidth),
       length: this.length,
     }
   }

@@ -8,18 +8,18 @@ test('concrete', () => {
   const property = object({ x: uint8() })
   const Proxy = property.concrete({ dirty: new Uint8Array(1) })
   const proxy = new Proxy(0)
-  expect(proxy).toMatchObject({x: 0})
+  expect(proxy).toMatchObject({ x: 0 })
   proxy.x = 12
-  expect(proxy).toMatchObject({x: 12})
+  expect(proxy).toMatchObject({ x: 12 })
 })
 
 test('concrete shapeless', () => {
   const property = object({ x: string() })
   const Proxy = property.concrete({ dirty: new Uint8Array(1) })
   const proxy = new Proxy(0)
-  expect(proxy).toMatchObject({x: ''})
+  expect(proxy).toMatchObject({ x: ''})
   proxy.x = 'foobar'
-  expect(proxy).toMatchObject({x: 'foobar'})
+  expect(proxy).toMatchObject({ x: 'foobar'})
 })
 
 test('nested', () => {
@@ -29,11 +29,11 @@ test('nested', () => {
   const onDirty = vi.fn()
   const Proxy = property.concrete({ dirty: new Uint8Array(1), onDirty })
   const proxy = new Proxy(0)
-  expect(proxy).toMatchObject({o: {x: {y: 0}}})
+  expect(proxy).toMatchObject({ o: { x: { y: 0 }}})
   expect(onDirty).toHaveBeenCalledTimes(1)
   proxy.o.x.y = 12
   expect(onDirty).toHaveBeenCalledTimes(2)
-  expect(proxy).toMatchObject({o: {x: {y: 12}}})
+  expect(proxy).toMatchObject({ o: { x: { y: 12 }}})
 })
 
 test('dirty', () => {
@@ -91,7 +91,7 @@ test('mapped onDirty', () => {
     x: uint8(),
     y: uint8().default(23),
     z: uint8().default(34),
-    a: object({n: uint8()}),
+    a: object({ n: uint8()}),
   })
   const Proxy = property.mapped({ data, dirty, onDirty: () => { dirties += 1; } })
   expect(dirties).toEqual(0)
@@ -114,7 +114,7 @@ test('toJSON', () => {
     x: uint8(),
     y: uint8().default(23),
     z: uint8().default(34),
-    a: object({n: uint8()}),
+    a: object({ n: uint8()}),
   })
   const Proxy = property.concrete({ dirty: new Uint8Array(1) })
   const proxy = new Proxy(0)
@@ -122,7 +122,7 @@ test('toJSON', () => {
   proxy.y = 2
   proxy.z = 3
   proxy.a.n = 4
-  expect(proxy[ToJSON]()).toEqual({x: 1, y: 2, z: 3, a: {n: 4}})
+  expect(proxy[ToJSON]()).toEqual({ x: 1, y: 2, z: 3, a: { n: 4 }})
 })
 
 test('toJSONWithoutDefaults', () => {
@@ -130,7 +130,7 @@ test('toJSONWithoutDefaults', () => {
     x: uint8(),
     y: uint8().default(23),
     z: uint8().default(34),
-    a: object({n: uint8()}),
+    a: object({ n: uint8()}),
   })
   const Proxy = property.concrete({ dirty: new Uint8Array(1) })
   const proxy = new Proxy(0)
@@ -138,10 +138,10 @@ test('toJSONWithoutDefaults', () => {
   proxy.y = 2
   proxy.z = 34
   proxy.a.n = 4
-  expect(proxy[ToJSONWithoutDefaults]()).toEqual({x: 1, y: 2, a: {n: 4}})
+  expect(proxy[ToJSONWithoutDefaults]()).toEqual({ x: 1, y: 2, a: { n: 4 }})
   proxy.y = 23
-  expect(proxy[ToJSONWithoutDefaults]()).toEqual({x: 1, a: {n: 4}})
-  expect(proxy[ToJSONWithoutDefaults]({a: {n: 4}})).toEqual({x: 1})
+  expect(proxy[ToJSONWithoutDefaults]()).toEqual({ x: 1, a: { n: 4 }})
+  expect(proxy[ToJSONWithoutDefaults]({ a: { n: 4 }})).toEqual({ x: 1 })
 })
 
 test('diff', () => {
@@ -149,7 +149,7 @@ test('diff', () => {
     x: uint8(),
     y: uint8().default(23),
     z: uint8().default(34),
-    a: object({n: uint8()}),
+    a: object({ n: uint8()}),
     b: string(),
     c: uint8().default(45),
   })
@@ -159,13 +159,13 @@ test('diff', () => {
   dirty[0] = 0
   expect(proxy[Diff]()).toEqual(undefined)
   proxy.x = 1
-  expect(proxy[Diff]()).toEqual({x: 1})
+  expect(proxy[Diff]()).toEqual({ x: 1 })
   dirty[0] |= 8
-  expect(proxy[Diff]()).toEqual({a: {n: 0}, x: 1})
+  expect(proxy[Diff]()).toEqual({ a: { n: 0 }, x: 1 })
   dirty[0] |= 16
-  expect(proxy[Diff]()).toEqual({a: {n: 0}, x: 1, b: ''})
+  expect(proxy[Diff]()).toEqual({ a: { n: 0 }, x: 1, b: ''})
   dirty[0] |= 32
-  expect(proxy[Diff]()).toEqual({a: {n: 0}, x: 1, b: '', c: 45})
+  expect(proxy[Diff]()).toEqual({ a: { n: 0 }, x: 1, b: '', c: 45 })
   dirty[0] = 0
   expect(proxy[Diff]()).toEqual(undefined)
 })
@@ -173,18 +173,18 @@ test('diff', () => {
 test('mapped nested', () => {
   const data = new DataView(new ArrayBuffer(1))
   const property = object({
-    o: object({x: uint8()}),
+    o: object({ x: uint8()}),
   })
   const Proxy = property.mapped({
     data,
     dirty: new Uint8Array(1),
   })
   const proxy = new Proxy(0)
-  expect(proxy).toMatchObject({o: {x: 0}})
+  expect(proxy).toMatchObject({ o: { x: 0 }})
   expect(data.getUint8(0)).toEqual(0)
   proxy.o.x = 12
   expect(data.getUint8(0)).toEqual(12)
-  expect(proxy).toMatchObject({o: {x: 12}})
+  expect(proxy).toMatchObject({ o: { x: 12 }})
 })
 
 test('mapped diff', () => {
@@ -194,16 +194,16 @@ test('mapped diff', () => {
     x: uint8(),
     y: uint8().default(23),
     z: uint8().default(34),
-    a: object({n: uint8()}),
+    a: object({ n: uint8()}),
   })
-  const Proxy = property.mapped({data, dirty})
+  const Proxy = property.mapped({ data, dirty })
   const proxy = new Proxy(0)
   dirty.fill(0)
   expect(proxy[Diff]()).toEqual(undefined)
   proxy.x = 1
-  expect(proxy[Diff]()).toEqual({x: 1})
+  expect(proxy[Diff]()).toEqual({ x: 1 })
   dirty[0] |= 8
-  expect(proxy[Diff]()).toEqual({a: {n: 0}, x: 1})
+  expect(proxy[Diff]()).toEqual({ a: { n: 0 }, x: 1 })
   dirty[0] = 0
   expect(proxy[Diff]()).toEqual(undefined)
 })
@@ -217,7 +217,7 @@ test('set', () => {
   })
   const Proxy = property.concrete({ dirty: new Uint8Array(1) })
   const proxy = new Proxy(0)
-  proxy[Set]({x: 3, y: 6})
+  proxy[Set]({ x: 3, y: 6 })
   expect(proxy.x).toEqual(3)
   expect(proxy.y).toEqual(6)
 })
@@ -228,16 +228,16 @@ test('default value', () => {
     y: uint8(),
     z: uint8().default(6),
     a: uint8(),
-  }).default({y: 2, z: 3})
+  }).default({ y: 2, z: 3 })
   const Proxy = property.concrete({ dirty: new Uint8Array(1) })
   const proxy = new Proxy(0)
   proxy[Initialize]()
-  expect(proxy[ToJSON]()).toEqual({x: 1, y: 2, z: 3, a: 0})
+  expect(proxy[ToJSON]()).toEqual({ x: 1, y: 2, z: 3, a: 0 })
 })
 
 test('decoration', () => {
   const property = object(
-    {x: uint8().default(123)},
+    { x: uint8().default(123)},
     (O) => class extends O { foo() { return 42 }},
   )
   const Proxy = property.concrete({ dirty: new Uint8Array(1) })

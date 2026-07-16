@@ -26,7 +26,7 @@ const Dirty = Symbol('Propertea.array.Dirty')
 
 const nop = () => {}
 
-interface ProperteaArrayProxyInterface<
+interface ProperteaArrayProxy<
   Element extends Propertea<any>,
   Stored = Element['_T']
 > extends ProxyClass {
@@ -139,19 +139,19 @@ export class ProperteaArray<
   Stored = Element extends ProxyProperty<any> ? ProxyMixed<Element['_T'] & Element['_E']> : Element['_T'],
 >
   extends ProxyProperty<
-    ProperteaArrayProxyInterface<Element, Stored>,
+    ProperteaArrayProxy<Element, Stored>,
     Extension,
     Iterable<Element['_T']> | undefined
   >
 {
 
   codec: CrunchesOptional<ProperteaArrayCodec<Element['codec']['inner']>>
-  decorate: ProxyDecorator<ProperteaArrayProxyInterface<Element, Stored>, Extension> | undefined
+  decorate: ProxyDecorator<ProperteaArrayProxy<Element, Stored>, Extension> | undefined
   element: Element
 
   constructor(
     { element }: { element: Element },
-    decorate?: ProxyDecorator<ProperteaArrayProxyInterface<Element, Stored>, Extension>,
+    decorate?: ProxyDecorator<ProperteaArrayProxy<Element, Stored>, Extension>,
   ) {
     super()
     this.decorate = decorate
@@ -173,17 +173,14 @@ export class ProperteaArray<
         element,
         {
           onDirty: (bit) => {
-            const index = Math.floor(bit / dirtyByteWidth)
-            if (index < pool.length.value) {
-              const proxy = pool.proxies[index] as any
-              if (proxy) {
-                onDirtyCallback(proxy[ArraySymbol][DirtyOffset], proxy[ArraySymbol])
-                proxy[ArraySymbol][Dirty]().add(proxy[Key])
-              }
+            const proxy = pool.proxies[Math.trunc(bit / dirtyByteWidth)]
+            if (proxy) {
+              onDirtyCallback(proxy[ArraySymbol][DirtyOffset], proxy[ArraySymbol])
+              proxy[ArraySymbol][Dirty]().add(proxy[Key])
             }
           },
         },
-      ) as any
+      )
       pool.ProxyCreator = class extends pool.ProxyCreator {
         ;[Key]: number | undefined = undefined
         ;[ArraySymbol]: ArrayProxy | undefined = undefined
@@ -206,9 +203,7 @@ export class ProperteaArray<
 
       ;[Dirty]() {
         let dirty = dirtyMap.get(this)
-        if (dirty) {
-          return dirty
-        }
+        if (dirty) { return dirty }
         dirty = new Set()
         dirtyMap.set(this, dirty)
         return dirty
@@ -226,9 +221,7 @@ export class ProperteaArray<
         this.setLength(0)
         // ignore any dirty noise from shrinking an existing array
         this[Dirty]().clear()
-        if (!value) {
-          return
-        }
+        if (!value) { return }
         if (Symbol.iterator in value) {
           let i = 0
           for (const elm of value) {
@@ -238,11 +231,6 @@ export class ProperteaArray<
         else {
           this[ProperteaSet](value)
         }
-      }
-
-      static markClean() {
-        dirtyMap = new WeakMap<any, Set<number>>()
-        pool?.ProxyCreator.markClean()
       }
 
       ;[ToJSONWithoutDefaults](_defaults?: any): Element['_T'][] | undefined {
@@ -263,6 +251,11 @@ export class ProperteaArray<
 
       get length() {
         return this.$$array.length
+      }
+
+      static markClean() {
+        dirtyMap = new WeakMap<any, Set<number>>()
+        pool?.ProxyCreator.markClean()
       }
 
     }
@@ -380,7 +373,7 @@ export class ProperteaArray<
       }
     }
     const Decorated = this.decorate ? this.decorate(ArrayProxy) : ArrayProxy
-    return Decorated as ProxyMixedCreator<ProperteaArrayProxyInterface<Element, Stored> & Extension>
+    return Decorated as ProxyMixedCreator<ProperteaArrayProxy<Element, Stored> & Extension>
   }
 
   mapped(
@@ -398,7 +391,7 @@ export function array<
   Stored = P extends ProxyProperty<any> ? ProxyMixed<P['_T'] & P['_E']> : P['_T'],
 >(
   options: { element: P; length?: number },
-  decorate?: ProxyDecorator<ProperteaArrayProxyInterface<P, Stored>, E>,
+  decorate?: ProxyDecorator<ProperteaArrayProxy<P, Stored>, E>,
 ) {
   return new ProperteaArray(options, decorate)
 }

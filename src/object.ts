@@ -1,6 +1,6 @@
 import { CrunchesObject, CrunchesOptional, type CrunchesType } from 'crunches'
 
-import type { DeepPartial } from './internal-types.ts'
+import { type DeepPartial } from './internal-types.ts'
 import {
   DataOffset,
   Diff,
@@ -83,7 +83,7 @@ export class ProperteaObject<
     configuration: ProxyCreatorConcreteConfiguration,
     isRoot = true,
   ) {
-    const {properties} = this
+    const { properties } = this
     // compute defaults
     const defaults: Record<string, any> = {}
     for (const key in properties) {
@@ -363,7 +363,7 @@ export class ProperteaObject<
     configuration: ProxyCreatorMappedConfiguration,
     isRoot = true,
   ) {
-    const {properties} = this
+    const { properties } = this
     const defaults: Record<string, any> = {}
     // compute defaults
     for (const key in properties) {

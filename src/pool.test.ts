@@ -18,7 +18,7 @@ test('data', () => {
       }),
     }),
   }))
-  const first = pool.allocate({x: {y: {z: 43}}})
+  const first = pool.allocate({ x: { y: { z: 43 }}})
   const array = new Uint8Array(pool.data.memory.buffer)
   expect(array[0]).toEqual(43)
   first.x.y.a = 12
@@ -33,11 +33,11 @@ test('dirty (mapped)', () => {
     x: uint8(),
   }))
   const proxy = pool.allocate()
-  expect(proxy[Diff]()).toEqual({o: {x: 0}, x: 0})
+  expect(proxy[Diff]()).toEqual({ o: { x: 0 }, x: 0 })
   proxy[MarkClean]()
   pool.free(proxy)
   pool.allocate()
-  expect(proxy[Diff]()).toEqual({o: {x: 0}, x: 0})
+  expect(proxy[Diff]()).toEqual({ o: { x: 0 }, x: 0 })
 })
 
 test('dirty (concrete)', () => {
@@ -48,18 +48,18 @@ test('dirty (concrete)', () => {
     x: string(),
   }))
   const proxy = pool.allocate()
-  expect(proxy[Diff]()).toEqual({o: {x: ''}, x: ''})
+  expect(proxy[Diff]()).toEqual({ o: { x: ''}, x: ''})
   proxy[MarkClean]()
   pool.free(proxy)
   pool.allocate()
-  expect(proxy[Diff]()).toEqual({o: {x: ''}, x: ''})
+  expect(proxy[Diff]()).toEqual({ o: { x: ''}, x: ''})
 })
 
 test('shapeless', () => {
   const pool = new Pool(object({
     x: string(),
   }))
-  const first = pool.allocate({x: 'asd'})
+  const first = pool.allocate({ x: 'asd'})
   expect(pool.views.dirty[0]).toEqual(1)
   pool.views.dirty.fill(0)
   first.x = 'asd'
@@ -76,7 +76,7 @@ test('churn', () => {
   const first = pool.allocate()
   first.z = 23
   pool.free(first)
-  expect(pool.allocate({a: 54})).toBe(first)
+  expect(pool.allocate({ a: 54 })).toBe(first)
   expect(new Uint8Array(pool.data.memory.buffer)[1]).toEqual(54)
   expect(first.z).toEqual(123)
 })
@@ -98,7 +98,7 @@ test('allocation augmentation', () => {
     z: uint8().default(123),
     a: uint8().default(234),
   }, (O) => class extends O { bar() { return 'bar' }}))
-  const first = pool.allocate<{foo: number}>({}, (proxy) => { proxy.foo = 12; })
+  const first = pool.allocate<{ foo: number }>({}, (proxy) => { proxy.foo = 12; })
   expect(first.foo).toEqual(12)
   expect(first.bar()).toEqual('bar')
 })
@@ -115,12 +115,12 @@ test('wasm', async () => {
   for (let i = 0; i < 10; ++i) {
     const sample = Math.random()
     samples.push(sample)
-    pool.allocate({z: sample})
+    pool.allocate({ z: sample })
   }
   pool.markClean()
-  const {default: buffer} = await import('./pool.test.wat?multi_memory')
-  const exports = await WebAssembly.instantiate(buffer, {pool: pool.wasmImports()})
-    .then(({instance: {exports}}) => exports as WasmTestExports)
+  const { default: buffer } = await import('./pool.test.wat?multi_memory')
+  const exports = await WebAssembly.instantiate(buffer, { pool: pool.wasmImports()})
+    .then(({ instance: { exports }}) => exports as WasmTestExports)
   const parameter = Math.random()
   exports.thisIsAWasmTest(parameter)
   for (let i = 0; i < 10; ++i) {

@@ -19,8 +19,8 @@ import {
   ToJSONWithoutDefaults,
 } from './proxy.js'
 
-const Key = Symbol('Propertea.map.Index')
-const MapSymbol = Symbol('Propertea.map.Symbol')
+const Key = Symbol('Propertea.map.Key')
+const MapSymbol = Symbol('Propertea.map.MapSymbol')
 const Dirty = Symbol('Propertea.map.Dirty')
 
 type MapKey = number | string
@@ -29,7 +29,7 @@ type MapDiff<K, V> = MapEntry<K, V>[]
 type MapEntry<K, V> = [K, V]
 type MapSettable<K, V> = Iterable<[K, V]> | MapDiff<K, V>
 
-interface ProperteaMapProxyInterface<K, V, Stored = V> extends ProxyClass {
+interface ProperteaMapProxy<K, V, Stored = V> extends ProxyClass {
 
   [Initialize](value?: MapSettable<K, V>): void
   [ProperteaSet](value?: MapSettable<K, V>): void
@@ -52,20 +52,20 @@ export class ProperteaMap<
   Stored = Value extends ProxyProperty<any> ? ProxyMixed<Value['_T'] & Value['_E']> : Value['_T'],
 >
   extends ProxyProperty<
-    ProperteaMapProxyInterface<Key['_T'], Value['_T'], Stored>,
+    ProperteaMapProxy<Key['_T'], Value['_T'], Stored>,
     Extension,
     MapSettable<Key['_T'], Value['_T']>
   >
 {
 
   codec: CrunchesOptional<CrunchesMap<Key['codec']['inner'], Value['codec']['inner'], true>>
-  decorate: ProxyDecorator<ProperteaMapProxyInterface<Key['_T'], Value['_T'], Stored>, Extension> | undefined
+  decorate: ProxyDecorator<ProperteaMapProxy<Key['_T'], Value['_T'], Stored>, Extension> | undefined
   keyProperty: Key
   valueProperty: Value
 
   constructor(
     { key, value }: { key: Key; value: Value },
-    decorate?: ProxyDecorator<ProperteaMapProxyInterface<Key['_T'], Value['_T'], Stored>, Extension>,
+    decorate?: ProxyDecorator<ProperteaMapProxy<Key['_T'], Value['_T'], Stored>, Extension>,
   ) {
     super()
     this.decorate = decorate
@@ -89,18 +89,15 @@ export class ProperteaMap<
         valueProperty,
         {
           onDirty: (bit) => {
-            const index = Math.floor(bit / dirtyByteWidth)
-            if (index < pool.length.value) {
-              const proxy = pool.proxies[index] as any
-              if (proxy) {
-                onDirtyCallback(proxy[MapSymbol][DirtyOffset], proxy[MapSymbol])
-                proxy[MapSymbol][Dirty]().add(proxy[Key])
-              }
+            const proxy = pool.proxies[Math.trunc(bit / dirtyByteWidth)]
+            if (proxy) {
+              onDirtyCallback(proxy[MapSymbol][DirtyOffset], proxy[MapSymbol])
+              proxy[MapSymbol][Dirty]().add(proxy[Key])
             }
           },
         },
-      ) as any
-      pool.ProxyCreator = class extends pool.ProxyCreator {
+      )
+      pool.ProxyCreator = class ProperteaMapPoolProxy extends pool.ProxyCreator {
         ;[MapSymbol]: MapProxy | undefined = undefined
         ;[Key]: number | undefined = undefined
       }
@@ -285,7 +282,7 @@ export class ProperteaMap<
     }
     const Decorated = this.decorate ? this.decorate(MapProxy) : MapProxy
     return Decorated as (
-      ProxyMixedCreator<ProperteaMapProxyInterface<Key['_T'], Value['_T'], Stored> & Extension>
+      ProxyMixedCreator<ProperteaMapProxy<Key['_T'], Value['_T'], Stored> & Extension>
     )
   }
 
@@ -305,7 +302,7 @@ export function map<
   Stored = V extends ProxyProperty<any> ? ProxyMixed<V['_T'] & V['_E']> : V['_T'],
 >(
   options: { key: K; value: V },
-  decorate?: ProxyDecorator<ProperteaMapProxyInterface<K['_T'], V['_T'], Stored>, E>,
+  decorate?: ProxyDecorator<ProperteaMapProxy<K['_T'], V['_T'], Stored>, E>,
 ) {
   return new ProperteaMap(options, decorate)
 }

@@ -25,7 +25,7 @@ test('proxy', () => {
   })
   const Map = property.concrete({ dirty: new Uint8Array(1) })
   const proxy = new Map(0)
-  const value = {x: 3}
+  const value = { x: 3 }
   proxy.set(0, value)
   expect(proxy.get(0)).not.toBe(value)
   expect(proxy.get(0)![ToJSON]()).toEqual(value)
@@ -38,9 +38,9 @@ test('ToJSON', () => {
   })
   const Map = property.concrete({ dirty: new Uint8Array(1) })
   const proxy = new Map(0)
-  const value = {x: 3}
+  const value = { x: 3 }
   proxy.set(0, value)
-  expect(proxy[ToJSON]()).toEqual([[0, {x: 3}]])
+  expect(proxy[ToJSON]()).toEqual([[0, { x: 3 }]])
 })
 
 test('nested', () => {
@@ -53,18 +53,18 @@ test('nested', () => {
   })
   const Map = property.concrete({ dirty: new Uint8Array(1) })
   const proxy = new Map(0)
-  proxy.set(0, [[0, {x: 3}]] as any)
-  expect(proxy[ToJSON]()).toEqual([[0, [[0, {x: 3}]]]])
+  proxy.set(0, [[0, { x: 3 }]] as any)
+  expect(proxy[ToJSON]()).toEqual([[0, [[0, { x: 3 }]]]])
   proxy.get(0)!.get(0)!.x = 1
-  expect(proxy[ToJSON]()).toEqual([[0, [[0, {x: 1}]]]])
+  expect(proxy[ToJSON]()).toEqual([[0, [[0, { x: 1 }]]]])
   const Map2 = map({
     key: uint8(),
     value: object({ x: uint8() }),
   }).concrete({ dirty: new Uint8Array(1) })
   const proxy2 = new Map2(0)
-  proxy2.set(0, {x: 5})
+  proxy2.set(0, { x: 5 })
   proxy.set(0, proxy2)
-  expect(proxy[ToJSON]()).toEqual([[0, [[0, {x: 5}]]]])
+  expect(proxy[ToJSON]()).toEqual([[0, [[0, { x: 5 }]]]])
 })
 
 test('dirty', () => {
@@ -76,9 +76,9 @@ test('dirty', () => {
     dirty: new Uint8Array(1),
   })
   const proxy = new Map(0)
-  const value = {x: 3}
+  const value = { x: 3 }
   proxy.set(0, value)
-  expect(proxy[Diff]()).toEqual([[0, {x: 3}]])
+  expect(proxy[Diff]()).toEqual([[0, { x: 3 }]])
   proxy.delete(0)
   expect(proxy[Diff]()).toEqual([[0, undefined]])
   proxy.set(1, value)
@@ -102,12 +102,12 @@ test('dirty nested', () => {
   const onDirty = vi.fn()
   const Map = property.concrete({ dirty, onDirty })
   const proxy = new Map(0, 0)
-  const value = {x: 3}
+  const value = { x: 3 }
   proxy.set(0, [[0, value]] as any)
-  expect(proxy[Diff]()).toEqual([[0, [[0, {x: 3}]]]])
+  expect(proxy[Diff]()).toEqual([[0, [[0, { x: 3 }]]]])
   proxy[MarkClean]()
   proxy.get(0)!.get(0)!.x = 2
-  expect(proxy[Diff]()).toEqual([[0, [[0, {x: 2}]]]])
+  expect(proxy[Diff]()).toEqual([[0, [[0, { x: 2 }]]]])
 })
 
 test('dirty bits (proxy)', () => {
