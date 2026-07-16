@@ -51,6 +51,7 @@ interface JsonProxyInterface extends ProxyClass {
   [Initialize](value?: CrunchesJSONOutput): void
   [ToJSON](): CrunchesJSONOutput
   [ToJSONWithoutDefaults](defaults?: any): CrunchesJSONOutput | undefined
+  patch(value: CrunchesJSONOutput): void
 }
 
 export class ProperteaJson<Decorator extends object = {}>
