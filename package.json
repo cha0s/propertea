@@ -31,7 +31,7 @@
   },
   "scripts": {
     "build": "vite build && tsc && dts-bundle-generator --out-file dist/index.d.ts src/index.ts",
-    "test": "vitest src"
+    "test": "vitest"
   },
   "sideEffects": false,
   "type": "module",
