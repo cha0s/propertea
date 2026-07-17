@@ -1,8 +1,8 @@
 import { expect, test } from 'vitest'
 
-import { object } from './object.js'
-import { Diff, MarkClean, ToJSON } from './proxy.js'
-import { Pool } from './pool.js'
+import { object } from './object.ts'
+import { Diff, MarkClean, ToJSON } from './proxy.ts'
+import { Pool } from './pool.ts'
 import {
   float32,
   string,

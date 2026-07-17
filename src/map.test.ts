@@ -5,7 +5,7 @@ import { map } from './map.ts'
 import { object } from './object.ts'
 import { Pool } from './pool.ts'
 import { uint8, uint32 } from './primitives.ts'
-import { Diff, MarkClean, Set, ToJSON } from './proxy.js'
+import { Diff, MarkClean, Set, ToJSON } from './proxy.ts'
 
 test('primitive', () => {
   const property = map({

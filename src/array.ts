@@ -1,6 +1,6 @@
 import { CrunchesArray, CrunchesMap, CrunchesOptional, CrunchesType, CrunchesVarInt, type Target } from 'crunches'
 
-import { Pool } from './pool.js'
+import { Pool } from './pool.ts'
 import { Propertea } from './propertea.ts'
 import {
   DataOffset,
@@ -17,7 +17,7 @@ import {
   Set as ProperteaSet,
   ToJSON,
   ToJSONWithoutDefaults,
-} from './proxy.js'
+} from './proxy.ts'
 import { type DeepPartial } from './internal-types.ts'
 
 const Key = Symbol('Propertea.array.Index')

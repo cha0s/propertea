@@ -1,6 +1,6 @@
 import { CrunchesMap, CrunchesOptional } from 'crunches'
 
-import { Pool } from './pool.js'
+import { Pool } from './pool.ts'
 import { Propertea } from './propertea.ts'
 import {
   DataOffset,
@@ -17,7 +17,7 @@ import {
   Set as ProperteaSet,
   ToJSON,
   ToJSONWithoutDefaults,
-} from './proxy.js'
+} from './proxy.ts'
 
 const Key = Symbol('Propertea.map.Key')
 const MapSymbol = Symbol('Propertea.map.MapSymbol')

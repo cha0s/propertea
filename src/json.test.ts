@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest'
 
 import { json } from './json.ts'
-import { Diff, MarkClean, Set, ToJSON } from './proxy.js'
+import { Diff, MarkClean, Set, ToJSON } from './proxy.ts'
 
 test('default value', () => {
   const property = json().default({ foo: 'bar', baz: [1, 2, 3] })

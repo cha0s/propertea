@@ -16,7 +16,7 @@ import {
   Set,
   ToJSON,
   ToJSONWithoutDefaults,
-} from './proxy.js'
+} from './proxy.ts'
 import { Propertea } from './propertea.ts'
 
 export type ProperteaObjectProps = Record<string, Propertea<unknown>>

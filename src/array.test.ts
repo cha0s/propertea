@@ -3,8 +3,8 @@ import { expect, test, vi } from 'vitest'
 import { array } from './array.ts'
 import { object } from './object.ts'
 import { Pool } from './pool.ts'
-import { uint8, uint32 } from  './primitives.js'
-import { Diff, Initialize, MarkClean, Set, ToJSON } from './proxy.js'
+import { uint8, uint32 } from  './primitives.ts'
+import { Diff, Initialize, MarkClean, Set, ToJSON } from './proxy.ts'
 
 test('default value', () => {
   const property = array({
