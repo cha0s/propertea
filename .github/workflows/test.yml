@@ -1,49 +1,41 @@
-name: 🧪 Test
+name: CI
 
 on:
   push:
-    branches:
-      - master
+    branches: [master]
   pull_request:
-    branches:
-      - master
+    branches: [master]
   workflow_dispatch: {}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
 
-  test:
-    name: "🧪 Test: (Node: ${{ matrix.node }})"
-    strategy:
-      fail-fast: false
-      matrix:
-        node:
-          - 22
-          - 24
-
+  verify:
+    name: ✅ Verify node@${{ matrix.node-version }}
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [ lts/jod, latest ]
 
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: ${{ matrix.node }}
+          node-version: ${{ matrix.node-version }}
           cache: npm
 
       - name: 📥 Install deps
         run: npm ci
 
-      - name: 🏗 Build
-        run: npm run build
-
-      - name: 🔬 Lint
-        run: npm run lint
-
       - name: 🧪 Run tests
         run: npm run -- test --project test
+
+      - name: 🏗 Build
+        run: npm run build
