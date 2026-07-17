@@ -1,4 +1,9 @@
-import { CrunchesJson, type CrunchesJSONOutput } from 'crunches'
+import {
+  CrunchesJson,
+  type CrunchesJsonOptions,
+  type CrunchesJSONOutput,
+  type CrunchesOptional,
+} from 'crunches'
 
 import {
   DataOffset,
@@ -57,9 +62,14 @@ interface JsonProxyInterface extends ProxyClass {
 export class ProperteaJson<Decorator extends object = {}>
   extends ProxyProperty<JsonProxyInterface, Decorator, CrunchesJSONOutput>
 {
-  codec = new CrunchesJson().optional()
+  codec: CrunchesOptional<CrunchesJson>
   decorate: ProxyDecorator<JsonProxyInterface, Decorator> | undefined
   defaultValue = {}
+
+  constructor(options?: CrunchesJsonOptions) {
+    super()
+    this.codec = new CrunchesJson(options).optional()
+  }
 
   concrete(configuration: ProxyCreatorConcreteConfiguration, isRoot = true) {
     const { byteWidth, defaultValue, dirtyByteWidth } = this
@@ -141,4 +151,4 @@ export class ProperteaJson<Decorator extends object = {}>
 
 }
 
-export const json = () => new ProperteaJson()
+export const json = (options?: CrunchesJsonOptions) => new ProperteaJson(options)

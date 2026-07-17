@@ -13,15 +13,64 @@ Generate [monomorphic](https://mrale.ph/blog/2015/01/11/whats-up-with-monomorphi
 - Creating and applying diffs
 - Full (de)serialization to/from JSON
 - Fixed-size contiguous binary representation for efficient state transformations using `TypedArray` or even WASM.
-- Object pooling
 
-## Examples :mag:
+## Primitive types
 
-### Pool (fixed-size)
+| Type name | Width |
+| --------- | ----- |
+| boolean   | 1     |
+| float32   | 4     |
+| float64   | 8     |
+| int16     | 2     |
+| int32     | 4     |
+| int64     | 8     |
+| int8      | 1     |
+| string    | 0☨    |
+| uint16    | 2     |
+| uint32    | 4     |
+| uint64    | 8     |
+| uint8     | 1     |
+| varint    | 0☨    |
+| varuint   | 0☨    |
 
-Given a blueprint schema for a 2D position with x and y coordinates, let's create a pool of positions and allocate a couple:
+**☨**: 0-width types have dynamic size and so can't be mapped to a contiguous fixed-size memory buffer.
 
-```js
+## Proxy types
+
+Proxy types aggregate primitive and/or proxy types into higher-level structures.
+
+### Builders
+
+All proxy type builders accept a configuration object as the first parameter:
+
+#### `array`
+
+Requires an `element` key to define the structure of the array elements. Encodes a 32-bit prefix followed by the contents of the array.
+
+#### `json`
+
+Accepts options for [`JSON.stringify`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify):
+
+- [`replacer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify#replacer)
+- [`space`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify#space)
+
+and [`JSON.parse`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse):
+
+- [`reviver`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse#reviver)
+
+#### `map`
+
+Requires a `key` and `value` key to define the structure of the map.
+
+#### `object`
+
+The configuration object consists of the `Propertea`s of the object.
+
+### Pooling
+
+Given an object schema for a 2D position with x and y coordinates, we can create a pool of positions and allocate a couple:
+
+```ts
 import { float32, object, Pool } from 'propertea'
 
 // create
@@ -39,9 +88,9 @@ expect(second.x).to.equal(100)
 expect(second.y).to.equal(200)
 ```
 
-The state is mapped to contiguous memory:
+Since `float32` is a fixed-width type, the state is mapped to contiguous memory:
 
-```js
+```ts
 const view = new Float32Array(positionPool.data.memory.buffer)
 // equivalent!
 expect(view[0]).to.equal(first.x)
@@ -52,7 +101,7 @@ expect(view[3]).to.equal(second.y)
 
 State synchronization is bidirectional; updating the proxy updates the buffer and vice-versa:
 
-```js
+```ts
 // proxy -> buffer
 second.x = 123
 expect(view[2]).to.equal(123)
@@ -61,7 +110,9 @@ view[3] = 234
 expect(second.y).to.equal(234)
 ```
 
-Just note that setting the memory dirctly will bypass the automatic dirty tracking and change notification. This means it's really fast! You'll need to manage those yourself when you need them, though.
+**Note**: Setting the memory directly will bypass the automatic dirty tracking and change notification. However, this means it's really fast! You'll need to manage those yourself when you need them, though.
+
+## Examples :mag:
 
 ### Pool (dynamic)
 
@@ -69,7 +120,7 @@ Not all types are fixed-size. A familiar example would be a string.
 
 Dynamic-sized types aren't mapped to contiguous memory. Their data lives in JS properties.
 
-```js
+```ts
 import { object, Pool, string, uint32 } from 'propertea'
 
 // create
@@ -88,20 +139,20 @@ Notice that even though `age` is a `uint32` (a fixed-size type), **`userPool` be
 
 ### Change tracking
 
-By default, changes are tracked. Let's continue with our position pool from above:
+Changes are tracked. Let's continue with our position pool from above:
 
-```js
+```ts
 import { Diff } from 'propertea'
 
 const another = positionPool.allocate()
 expect(another[Diff]()).to.deep.equal({ x: 0, y: 0 })
 ```
 
-Why is there already a diff? **Proxies are created dirty**. Think about a game world with monsters. If a new monster spawns, all clients should automatically treat the new monster as a change. Make sense?
+Why is there already a diff right after the position was allocated? **Proxies are created dirty**. Think about a game world with monsters. If a new monster spawns, all clients should automatically treat the new monster as a change. Make sense?
 
 A proxy may be marked clean:
 
-```js
+```ts
 import { MarkClean } from 'propertea'
 
 another[MarkClean]()
@@ -112,7 +163,7 @@ expect(another[Diff]()).to.equal(undefined)
 
 Changes may trigger a callback:
 
-```js
+```ts
 import { object, Pool, string } from 'propertea'
 
 let bits: number[] = []
@@ -134,13 +185,13 @@ expect(bits).to.deep.equal([0, 1])
 
 ### WASM
 
-**Note**: Chrome has laughably bad WASM memory management and the default of using WASM memory has been disabled due to out of memory errors when using less than 100 MB of memory. This is due to Chrome allocating ***4 GB*** per instance for "safety".
+**Note**: Chrome has laughably bad WASM memory management and the default of using WASM memory has been disabled due to out-of-memory errors when using less than 1 MB of memory. This is due to Chrome allocating ***4 GB*** per memory instance for "safety", instead of only allocating what's needed.
 
 Pools ~~are~~ can be optionally structured to be operated on by WASM. See [src/pool.test.wat](./src/pool.test.wat) for a minimal example of using WASM to transform data (and track changes).
 
 Excerpted from [src/pool.test.js](./src/pool.test.js):
 
-```js
+```ts
 import { float32, object, Pool } from 'propertea'
 
 const pool = new Pool(object({
@@ -153,18 +204,18 @@ const samples = []
 for (let i = 0; i < 10; ++i) {
   const sample = Math.random()
   samples.push(sample)
-  pool.allocate({z: sample})
+  pool.allocate({ z: sample })
 }
 pool.markClean()
 // compile the WAT to WASM and get the exports
-const {default: buffer} = await import('./pool.test.wat?multi_memory')
+const { default: buffer } = await import('./pool.test.wat?multi_memory')
 
 // type the exports if you're using TypeScript
 interface WasmTestExports extends Record<string, any> {
   thisIsAWasmTest: (arg: number) => void
 }
-const exports = await WebAssembly.instantiate(buffer, {pool: pool.wasmImports()})
-  .then(({instance: {exports}}) => exports as WasmTestExports)
+const exports = await WebAssembly.instantiate(buffer, { pool: pool.wasmImports() })
+  .then(({ instance: { exports } }) => exports as WasmTestExports)
 // generate a random sample to pass to the WASM
 const parameter = Math.random()
 exports.thisIsAWasmTest(parameter)
@@ -176,10 +227,12 @@ exports.thisIsAWasmTest(parameter)
 
 The proxy can be serialized to JSON:
 
-```js
+```ts
 import { ToJSON } from 'propertea'
 expect(JSON.stringify(another[ToJSON]())).to.equal('{"x":0,"y":0}')
 ```
+
+Every `Propertea` uses (or builds) a [`crunches`](https://github.com/cha0s/crunches) codec to serialize to/from binary.
 
 ## Motivation
 
@@ -189,4 +242,10 @@ Networked real-time applications with arbitrarily-large mutable state (read: gam
 
 It is greatly beneficial for performance when data is arranged contiguously so that e.g. SIMD may be leveraged for data transformations.
 
-This library is *fast*. As you can see in [`src/pool.bench.js`](./benchmark/pool.bench.js) (run with `npm test -- --run --project bench`), Propertea beats native JavaScript by 100-1000x transforming contiguous data. Pooled allocations actually beat native after warming the pool.
+This library is *fast*. As you can see in [`benchmark/pool.bench.js`](./benchmark/pool.bench.js) (run with `npm test -- --run --project bench`), Propertea beats native JavaScript by 100-1000x transforming contiguous data. Pooled allocations actually beat native after warming the pool.
+
+### TODO
+
+- [ ] Fixed-length arrays
+- [ ] Write up creating custom `Propertea` types
+- [ ] Write up manual dirty tracking/notification when using memory access/WASM

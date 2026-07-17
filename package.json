@@ -1,7 +1,7 @@
 {
   "author": "cha0s",
   "dependencies": {
-    "crunches": "^3.3.0"
+    "crunches": "^3.3.1"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
