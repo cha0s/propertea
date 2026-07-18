@@ -74,18 +74,18 @@ describe('documentation', () => {
     for (let i = 0; i < 10; ++i) {
       const sample = Math.random()
       samples.push(sample)
-      pool.allocate({z: sample})
+      pool.allocate({ z: sample })
     }
     pool.markClean()
     // compile the WAT to WASM and get the exports
-    const {default: buffer} = await import('./pool.test.wat?multi_memory')
+    const { default: buffer } = await import('./pool.test.wat?multi_memory')
 
     // type the exports if you're using TypeScript
     interface WasmTestExports extends Record<string, any> {
       thisIsAWasmTest: (arg: number) => void
     }
-    const exports = await WebAssembly.instantiate(buffer, {pool: pool.wasmImports()})
-      .then(({instance: {exports}}) => exports as WasmTestExports)
+    const exports = await WebAssembly.instantiate(buffer, { pool: pool.wasmImports() })
+      .then(({ instance: { exports } }) => exports as WasmTestExports)
     // generate a random sample to pass to the WASM
     const parameter = Math.random()
     exports.thisIsAWasmTest(parameter)

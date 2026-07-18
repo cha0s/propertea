@@ -32,7 +32,7 @@ export class Pool<
 
   freeList: (PoolProxyMixed<Prop>)[] = []
 
-  length = new WebAssembly.Global({mutable: true, value: 'i32'}, 0)
+  length = new WebAssembly.Global({ mutable: true, value: 'i32' }, 0)
 
   property: Prop
 

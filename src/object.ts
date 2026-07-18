@@ -92,7 +92,7 @@ export class ProperteaObject<
         ? property.concrete(configuration, false)
         : property.defaultValue
     }
-    const Proxy = this.generateProxy({defaults, configuration, isRoot})
+    const Proxy = this.generateProxy({ defaults, configuration, isRoot })
     let dirtyIndex = 0
     const Base = codegen(
       `
@@ -372,7 +372,7 @@ export class ProperteaObject<
         ? property.mapped(configuration, false)
         : property.defaultValue
     }
-    const Proxy = this.generateProxy({defaults, configuration, isRoot})
+    const Proxy = this.generateProxy({ defaults, configuration, isRoot })
     // apply blueprint proxy
     const Base = codegen(
       `
