@@ -14,13 +14,40 @@ export const ToJSONWithoutDefaults = Symbol('Propertea.ToJSONWithoutDefaults')
  * Base interface implemented by all ProxyPropertea values.
  */
 export interface ProxyClass {
+  /**
+   * Offset in the data buffer.
+   */
   [DataOffset]: number
-  [Diff](): unknown
+  /**
+   * Offset in the dirty buffer.
+   */
   [DirtyOffset]: number
+  /**
+   * The state diff since the last time this proxy was marked clean.
+   */
+  [Diff](): unknown
+  /**
+   * Set a value into this proxy. Usually merges with existing state from a diff.
+   * @param value The value to set.
+   */
   [Set](value?: unknown): void
+  /**
+   * Initialize this proxy with a value. Overwrites existing state.
+   * @param value The value to initialize with.
+   */
   [Initialize](value?: unknown): void
+  /**
+   * Mark this proxy clean.
+   */
   [MarkClean](): void
+  /**
+   * Output state as JSON.
+   */
   [ToJSON](): unknown
+  /**
+   * Output state as JSON, excluding any default values.
+   * @param defaults The default values to exclude.
+   */
   [ToJSONWithoutDefaults](defaults?: unknown): unknown | undefined
 }
 
@@ -32,17 +59,24 @@ export type ProxyMixed<T> = ProxyClass & T
 /**
  * Proxy creator return type.
  */
-export type ProxyMixedCreator<T> = (
-  (new (indexOrDataOffset: number, dirtyOffset?: number) => ProxyMixed<T>)
-  & { markClean: () => void }
-)
+export interface ProxyConstructorMixed<T> {
+  new (indexOrDataOffset: number, dirtyOffset?: number): ProxyMixed<T>
+  markClean: () => void
+}
+
+/**
+ * Function to decorate a mixed proxy object.
+ */
+export type ProxyDecorator<T, E extends object> = (
+  C: ProxyConstructorMixed<T>
+) => ProxyConstructorMixed<T & E>
 
 /**
  * Callback function passed to proxy creators for dirty notifications.
  */
 export type ProxyOnDirtyCallback = (bit: number, proxy?: any) => void
 
-export type ProxyConstructorConcreteConfiguration = {
+export interface ProxyConstructorConcreteConfiguration {
   /**
    * Dirty buffer.
    */
@@ -53,7 +87,7 @@ export type ProxyConstructorConcreteConfiguration = {
   onDirty?: ProxyOnDirtyCallback
 }
 
-export type ProxyConstructorMappedConfiguration = {
+export interface ProxyConstructorMappedConfiguration {
   /**
    * Data buffer.
    */
@@ -81,30 +115,28 @@ export abstract class ProxyPropertea<
   declare _E: Extension
 
   /**
-   * Configure a concrete proxy creator.
-   * @param configuration Buffers and optional dirty notification callback
-   * @param isRoot Is this the root proxy? Internal use.
+   * Configure a concrete proxy constructor.
+   * @param configuration Constructor configuration.
+   * @param configuration.dirty Dirty buffer.
+   * @param configuration.onDirty Dirty notification callback.
+   * @param isRoot Is this the root proxy? Advanced use only.
    */
   abstract concrete(
     configuration: ProxyConstructorConcreteConfiguration,
     isRoot: boolean,
-  ): ProxyMixedCreator<T & Extension>
+  ): ProxyConstructorMixed<T & Extension>
 
   /**
-   * Configure a mapped proxy creator.
-   * @param configuration Buffers and optional dirty notification callback
-   * @param isRoot Is this the root proxy? Internal use.
+   * Configure a mapped proxy constructor.
+   * @param configuration Constructor configuration.
+   * @param configuration.data Data buffer.
+   * @param configuration.dirty Dirty buffer.
+   * @param configuration.onDirty Dirty notification callback.
+   * @param isRoot Is this the root proxy? Advanced use only.
    */
   abstract mapped(
     configuration: ProxyConstructorMappedConfiguration,
     isRoot: boolean,
-  ): ProxyMixedCreator<T & Extension>
+  ): ProxyConstructorMixed<T & Extension>
 
 }
-
-/**
- * Function to decorate a mixed proxy object.
- */
-export type ProxyDecorator<T, E extends object> = (
-  C: new (index: number) => ProxyMixed<T>
-) => new (index: number) => ProxyMixed<T> & E

@@ -5,7 +5,7 @@ import {
   MarkClean,
   ProxyPropertea,
   type ProxyMixed,
-  type ProxyMixedCreator,
+  type ProxyConstructorMixed,
   type ProxyOnDirtyCallback,
 } from './proxy.ts'
 
@@ -85,7 +85,7 @@ export class Pool<
   /**
    * (Class) constructor function used to instantiate new proxies.
    */
-  ProxyConstructor: ProxyMixedCreator<Prop['_T'] & Prop['_E']>
+  ProxyConstructor: ProxyConstructorMixed<Prop['_T'] & Prop['_E']>
 
   /**
    *
@@ -124,7 +124,7 @@ export class Pool<
         super(index)
         this[Index] = index
       }
-    } as unknown as ProxyMixedCreator<Prop['_T'] & Prop['_E']>
+    } as unknown as ProxyConstructorMixed<Prop['_T'] & Prop['_E']>
   }
 
   /**

@@ -12,7 +12,7 @@ import {
   type ProxyConstructorConcreteConfiguration,
   type ProxyDecorator,
   type ProxyMixed,
-  type ProxyMixedCreator,
+  type ProxyConstructorMixed,
   ProxyPropertea,
   Set as ProperteaSet,
   ToJSON,
@@ -26,6 +26,10 @@ const Dirty = Symbol('Propertea.array.Dirty')
 
 const nop = () => {}
 
+type ProperteaArrayDiff<
+  E extends CrunchesType<unknown, unknown>
+> = Record<number, E['_output'] | E['_input'] | undefined>
+
 interface ProperteaArrayProxy<
   Element extends Propertea<any>,
   Stored = Element['_T']
@@ -38,18 +42,37 @@ interface ProperteaArrayProxy<
   [ToJSON](): Element['_T'][]
   [ToJSONWithoutDefaults](defaults?: any): Element['_T'][] | undefined
 
-  at(key: number): Stored | undefined
+  /**
+   * Get the element at index.
+   * @param index The array index.
+   */
+  at(index: number): Stored | undefined
+  /**
+   * The array length.
+   */
   get length(): number
+  /**
+   * Test whether this array includes a value.
+   * @param value The value to test for.
+   */
   includes(value: Element['_T']): boolean
-  setAt(key: number, value: Element['_T'] | undefined): void
+  /**
+   * Set a value at a specific index.
+   * @param index The array index.
+   * @param value The value to set.
+   */
+  setAt(index: number, value: Element['_T'] | undefined): void
+  /**
+   * Set the array length.
+   * @param length The length to set.
+   */
   setLength(length: number): void
 
 }
 
-type ProperteaArrayDiff<
-  E extends CrunchesType<unknown, unknown>
-> = Record<number, E['_output'] | E['_input'] | undefined>
-
+/**
+ * Custom codec to encode and decode either an array or an array diff.
+ */
 export class ProperteaArrayCodec<
   E extends CrunchesType<unknown, unknown>
 >
@@ -133,6 +156,9 @@ export class ProperteaArrayCodec<
 
 }
 
+/**
+ * Propertea array.
+ */
 export class ProperteaArray<
   Element extends Propertea<unknown>,
   Extension extends object = {},
@@ -241,8 +267,8 @@ export class ProperteaArray<
         return this.$$array.values()
       }
 
-      at(key: number): Stored {
-        return this.$$array[key] as Stored
+      at(index: number): Stored {
+        return this.$$array[index] as Stored
       }
 
       includes(value: Element['_T']) {
@@ -265,32 +291,34 @@ export class ProperteaArray<
       [Diff](): ProperteaArrayDiff<Element['codec']['inner']> | undefined
       [MarkClean](): void
       [ToJSON](): Element['_T'][]
-      setAt(key: number, value: Element['_T'] | undefined): void
+      setAt(index: number, value: Element['_T'] | undefined): void
       setLength(length: number): void
     }
 
     if (element instanceof ProxyPropertea) {
-      ArrayProxy.prototype.setAt = function(key: number, value: DeepPartial<Element['_T']> | undefined) {
-        if (undefined === value && key in this.$$array) {
-          this.$$pool.free(this.$$array[key])
+
+      ArrayProxy.prototype.setAt = function(index: number, value: DeepPartial<Element['_T']> | undefined) {
+        if (undefined === value && index in this.$$array) {
+          this.$$pool.free(this.$$array[index])
         }
-        this[Dirty]().add(key)
+        this[Dirty]().add(index)
         let localValue
-        if (this.$$array[key]) {
-          (this.$$array[key] as typeof element['_T'])[ProperteaSet](value)
-          localValue = this.$$array[key]
+        if (this.$$array[index]) {
+          (this.$$array[index] as typeof element['_T'])[ProperteaSet](value)
+          localValue = this.$$array[index]
         }
         else {
           localValue = this.$$pool.allocate(value, (proxy: any) => {
-            proxy[Key] = key
+            proxy[Key] = index
             proxy[ArraySymbol] = this
           })
         }
         if (undefined !== value) {
           value = localValue
         }
-        this.$$array[key] = value
+        this.$$array[index] = value
       }
+
       ArrayProxy.prototype.setLength = function(length: number) {
         const { length: oldLength } = this.$$array
         for (let i = this.$$array.length - 1; i >= length; --i) {
@@ -308,6 +336,7 @@ export class ProperteaArray<
         }
         this.$$array.length = length
       }
+
       ArrayProxy.prototype[Diff] = function(): ProperteaArrayDiff<Element['codec']['inner']> | undefined {
         if (0 === this[Dirty]().size) { return }
         const diff: ProperteaArrayDiff<Element['codec']['inner']> = {}
@@ -317,12 +346,14 @@ export class ProperteaArray<
         }
         return diff
       }
+
       ArrayProxy.prototype[MarkClean] = function() {
         this[Dirty]().clear()
         for (const value of this.$$array) {
           value[MarkClean]()
         }
       }
+
       ArrayProxy.prototype[ToJSON] = function(): Element['_T'][] {
         const json = []
         for (const value of this.$$array) {
@@ -330,8 +361,10 @@ export class ProperteaArray<
         }
         return json
       }
+
     }
     else {
+
       ArrayProxy.prototype.setLength = function(length: number) {
         const { length: oldLength } = this.$$array
         for (let i = this.$$array.length - 1; i >= length; --i) {
@@ -345,14 +378,16 @@ export class ProperteaArray<
         }
         this.$$array.length = length
       }
-      ArrayProxy.prototype.setAt = function(key: number, value: Element['_T'] | undefined) {
-        this[Dirty]().add(key)
-        const previous = this.$$array[key]
-        this.$$array[key] = value
+
+      ArrayProxy.prototype.setAt = function(index: number, value: Element['_T'] | undefined) {
+        this[Dirty]().add(index)
+        const previous = this.$$array[index]
+        this.$$array[index] = value
         if (previous !== value) {
           onDirtyCallback(this[DirtyOffset], this)
         }
       }
+
       ArrayProxy.prototype[Diff] = function(): ProperteaArrayDiff<Element['codec']['inner']> | undefined {
         if (0 === this[Dirty]().size) { return }
         const diff: ProperteaArrayDiff<Element['codec']['inner']> = {}
@@ -361,9 +396,11 @@ export class ProperteaArray<
         }
         return diff
       }
+
       ArrayProxy.prototype[MarkClean] = function() {
         this[Dirty]().clear()
       }
+
       ArrayProxy.prototype[ToJSON] = function(): Element['_T'][] {
         const json = []
         for (const value of this.$$array) {
@@ -371,9 +408,10 @@ export class ProperteaArray<
         }
         return json
       }
+
     }
     const Decorated = this.decorate ? this.decorate(ArrayProxy) : ArrayProxy
-    return Decorated as ProxyMixedCreator<ProperteaArrayProxy<Element, Stored> & Extension>
+    return Decorated as ProxyConstructorMixed<ProperteaArrayProxy<Element, Stored> & Extension>
   }
 
   mapped(
@@ -385,12 +423,19 @@ export class ProperteaArray<
 
 }
 
+/**
+ * Create an array Propertea.
+ * @param options Array options.
+ * @param options.element Array element Propertea.
+ * @param decorate Optional proxy decorator function.
+ * @returns The array Propertea.
+ */
 export function array<
   P extends Propertea<unknown>,
   E extends object = {},
   Stored = P extends ProxyPropertea<any> ? ProxyMixed<P['_T'] & P['_E']> : P['_T'],
 >(
-  options: { element: P; length?: number },
+  options: { element: P },
   decorate?: ProxyDecorator<ProperteaArrayProxy<P, Stored>, E>,
 ) {
   return new ProperteaArray(options, decorate)

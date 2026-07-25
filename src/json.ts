@@ -15,7 +15,7 @@ import {
   type ProxyConstructorMappedConfiguration,
   type ProxyConstructorConcreteConfiguration,
   type ProxyDecorator,
-  type ProxyMixedCreator,
+  type ProxyConstructorMixed,
   ProxyPropertea,
   Set as ProperteaSet,
   ToJSON,
@@ -59,6 +59,9 @@ interface JsonProxyInterface extends ProxyClass {
   patch(value: CrunchesJSONOutput): void
 }
 
+/**
+ * JSON Propertea.
+ */
 export class ProperteaJson<Decorator extends object = {}>
   extends ProxyPropertea<JsonProxyInterface, Decorator, CrunchesJSONOutput>
 {
@@ -142,7 +145,7 @@ export class ProperteaJson<Decorator extends object = {}>
 
     }
     const Decorated = this.decorate ? this.decorate(JsonProxy) : JsonProxy
-    return Decorated as ProxyMixedCreator<JsonProxy & Decorator>
+    return Decorated as ProxyConstructorMixed<JsonProxy & Decorator>
   }
 
   mapped(configuration: ProxyConstructorMappedConfiguration, isRoot = true) {
@@ -151,4 +154,7 @@ export class ProperteaJson<Decorator extends object = {}>
 
 }
 
+/**
+ * Create JSON Propertea.
+ */
 export const json = (options?: CrunchesJsonOptions) => new ProperteaJson(options)

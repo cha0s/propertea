@@ -31,7 +31,7 @@ function codegen(code: string, context = {}) {
   return (new Function(Object.keys(context).join(','), code))(...Object.values(context))
 }
 
-export function defineProperty<T extends object, K extends PropertyKey, V>(
+function defineProperty<T extends object, K extends PropertyKey, V>(
   obj: T,
   key: K,
   value: V
@@ -41,6 +41,9 @@ export function defineProperty<T extends object, K extends PropertyKey, V>(
 
 const nop = () => {}
 
+/**
+ * Object Propertea.
+ */
 export class ProperteaObject<
   P extends ProperteaObjectProps,
   Decorator extends object = {},
@@ -77,8 +80,8 @@ export class ProperteaObject<
     this.dirtyBitWidth = dirtyBitWidth
     // augment with instance symbol
     defineProperty(this, Instance, Symbol('Propertea.object.root'))
-
   }
+
   concrete(
     configuration: ProxyConstructorConcreteConfiguration,
     isRoot = true,
@@ -139,6 +142,7 @@ export class ProperteaObject<
     )
     return this.decorate ? this.decorate(Base) : Base
   }
+
   generateProxy({
     defaults,
     configuration,
@@ -444,6 +448,9 @@ export class ProperteaObject<
 
 }
 
+/**
+ * Create object Propertea.
+ */
 export function object<
   P extends ProperteaObjectProps,
   Decorator extends object = {},
