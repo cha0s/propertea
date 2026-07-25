@@ -9,7 +9,7 @@ import {
   Initialize,
   MarkClean,
   type ProxyClass,
-  type ProxyCreatorConcreteConfiguration,
+  type ProxyConstructorConcreteConfiguration,
   type ProxyDecorator,
   type ProxyMixed,
   type ProxyMixedCreator,
@@ -75,7 +75,7 @@ export class ProperteaMap<
   }
 
   concrete(
-    configuration: ProxyCreatorConcreteConfiguration,
+    configuration: ProxyConstructorConcreteConfiguration,
     isRoot = true,
   ) {
 
@@ -97,7 +97,7 @@ export class ProperteaMap<
           },
         },
       )
-      pool.ProxyCreator = class ProperteaMapPoolProxy extends pool.ProxyCreator {
+      pool.ProxyConstructor = class ProperteaMapPoolProxy extends pool.ProxyConstructor {
         ;[MapSymbol]: MapProxy | undefined = undefined
         ;[Key]: number | undefined = undefined
       }
@@ -153,7 +153,7 @@ export class ProperteaMap<
       }
       static markClean() {
         dirtyMap = new WeakMap<any, Set<Key['_T']>>()
-        pool?.ProxyCreator.markClean()
+        pool?.ProxyConstructor.markClean()
       }
       ;[ToJSONWithoutDefaults](_defaults?: any): MapEntry<Key['_T'], Value['_T']>[] | undefined {
         return this[ToJSON]()
@@ -287,7 +287,7 @@ export class ProperteaMap<
   }
 
   mapped(
-    configuration: ProxyCreatorConcreteConfiguration,
+    configuration: ProxyConstructorConcreteConfiguration,
     isRoot = true,
   ) {
     return this.concrete(configuration, isRoot)

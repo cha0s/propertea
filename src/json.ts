@@ -12,8 +12,8 @@ import {
   Initialize,
   MarkClean,
   type ProxyClass,
-  type ProxyCreatorMappedConfiguration,
-  type ProxyCreatorConcreteConfiguration,
+  type ProxyConstructorMappedConfiguration,
+  type ProxyConstructorConcreteConfiguration,
   type ProxyDecorator,
   type ProxyMixedCreator,
   ProxyPropertea,
@@ -71,7 +71,7 @@ export class ProperteaJson<Decorator extends object = {}>
     this.codec = new CrunchesJson(options).optional()
   }
 
-  concrete(configuration: ProxyCreatorConcreteConfiguration, isRoot = true) {
+  concrete(configuration: ProxyConstructorConcreteConfiguration, isRoot = true) {
     const { byteWidth, defaultValue, dirtyBitWidth } = this
     let patchMap = new WeakMap<any, CrunchesJSONOutput>()
     const onDirty = configuration.onDirty ?? (() => {})
@@ -145,7 +145,7 @@ export class ProperteaJson<Decorator extends object = {}>
     return Decorated as ProxyMixedCreator<JsonProxy & Decorator>
   }
 
-  mapped(configuration: ProxyCreatorMappedConfiguration, isRoot = true) {
+  mapped(configuration: ProxyConstructorMappedConfiguration, isRoot = true) {
     return this.concrete(configuration, isRoot)
   }
 

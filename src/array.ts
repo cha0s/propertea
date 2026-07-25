@@ -9,7 +9,7 @@ import {
   Initialize,
   MarkClean,
   type ProxyClass,
-  type ProxyCreatorConcreteConfiguration,
+  type ProxyConstructorConcreteConfiguration,
   type ProxyDecorator,
   type ProxyMixed,
   type ProxyMixedCreator,
@@ -160,7 +160,7 @@ export class ProperteaArray<
   }
 
   concrete(
-    configuration: ProxyCreatorConcreteConfiguration,
+    configuration: ProxyConstructorConcreteConfiguration,
     isRoot = true,
   ) {
     const { defaultValue, element } = this
@@ -181,7 +181,7 @@ export class ProperteaArray<
           },
         },
       )
-      pool.ProxyCreator = class extends pool.ProxyCreator {
+      pool.ProxyConstructor = class extends pool.ProxyConstructor {
         ;[Key]: number | undefined = undefined
         ;[ArraySymbol]: ArrayProxy | undefined = undefined
       }
@@ -255,7 +255,7 @@ export class ProperteaArray<
 
       static markClean() {
         dirtyMap = new WeakMap<any, Set<number>>()
-        pool?.ProxyCreator.markClean()
+        pool?.ProxyConstructor.markClean()
       }
 
     }
@@ -377,7 +377,7 @@ export class ProperteaArray<
   }
 
   mapped(
-    configuration: ProxyCreatorConcreteConfiguration,
+    configuration: ProxyConstructorConcreteConfiguration,
     isRoot = true,
   ) {
     return this.concrete(configuration, isRoot)

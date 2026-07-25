@@ -11,40 +11,87 @@ import {
 
 export const Index = Symbol('Index')
 
+/**
+ * Proxy property with pool index mixed in.
+ */
 type PoolProxyMixed<Prop extends ProxyPropertea<any>> = (
   ProxyMixed<Prop['_T']> & { [Index]: number }
 )
 
 type PoolViews = {
+  /**
+   * Data buffer.
+   */
   data: DataView
+  /**
+   * Dirty buffer.
+   */
   dirty: Uint8Array
+  /**
+   * Dirty notification callback.
+   */
   onDirty?: ProxyOnDirtyCallback
 }
 
+/**
+ * A pool of proxy Propertea objects.
+ */
 export class Pool<
   Prop extends ProxyPropertea<any>,
   UseWasm extends boolean = any,
 > {
 
+  /**
+   * Data memory.
+   */
   data: TrackedMemory<UseWasm>
 
+  /**
+   * Dirty memory.
+   */
   dirty: TrackedMemory<UseWasm>
 
+  /**
+   * List of proxies that have been freed.
+   */
   freeList: (PoolProxyMixed<Prop>)[] = []
 
+  /**
+   * Total count of all allocations in this pool so far.
+   */
   length = new WebAssembly.Global({ mutable: true, value: 'i32' }, 0)
 
+  /**
+   * The Propertea used to configure and create proxies.
+   */
   property: Prop
 
+  /**
+   * The active proxies in this pool.
+   */
   proxies: (PoolProxyMixed<Prop> | null)[] = []
 
   views: PoolViews = {
+    /**
+     * Data buffer.
+     */
     data: new DataView(new ArrayBuffer(0)),
+    /**
+     * Dirty buffer.
+     */
     dirty: new Uint8Array(1),
   }
 
-  ProxyCreator: ProxyMixedCreator<Prop['_T'] & Prop['_E']>
+  /**
+   * (Class) constructor function used to instantiate new proxies.
+   */
+  ProxyConstructor: ProxyMixedCreator<Prop['_T'] & Prop['_E']>
 
+  /**
+   *
+   * @param property The Propertea used to configure and create proxies.
+   * @param params Dirty notification callback and WASM configuration.
+   */
   constructor(
     property: Prop,
     params?: {
@@ -71,7 +118,7 @@ export class Pool<
       nextGrow: 0,
     }
     const method = property.isMappable ? 'mapped' : 'concrete'
-    this.ProxyCreator = class extends property[method](this.views, true) {
+    this.ProxyConstructor = class extends property[method](this.views, true) {
       ;[Index]: number
       constructor(index: number) {
         super(index)
@@ -80,6 +127,12 @@ export class Pool<
     } as unknown as ProxyMixedCreator<Prop['_T'] & Prop['_E']>
   }
 
+  /**
+   * Allocate a new proxy by pulling from the fee pool or instantiating.
+   * @param value Default value used to initialize the proxy.
+   * @param initialize Custom initialization function to run before the proxy's [Initialize].
+   * @returns The proxy.
+   */
   allocate<E extends object = {}>(
     value?: DeepPartial<Prop['_T']>,
     initialize?: (_: PoolProxyMixed<Prop> & E) => void,
@@ -107,7 +160,7 @@ export class Pool<
         )
       }
       // allocate a new proxy
-      proxy = new this.ProxyCreator(length)
+      proxy = new this.ProxyConstructor(length)
       this.length.value += 1
     }
     // set and initialize
@@ -117,6 +170,9 @@ export class Pool<
     return proxy
   }
 
+  /**
+   * Get the WASM imports for this pool.
+   */
   wasmImports() {
     return {
       byte_width: new WebAssembly.Global({ value: 'i32' }, this.property.byteWidth),
@@ -132,10 +188,18 @@ export class Pool<
    */
   markClean() {
     new Uint8Array(this.dirty.memory.buffer).fill(0)
-    this.ProxyCreator.markClean?.()
+    this.ProxyConstructor.markClean?.()
   }
 
-  free(proxy: (ProxyMixed<Prop['_T']> & { [Index]: number })) {
+  /**
+   * Free a proxy.
+   * @param proxy The proxy to free.
+   */
+  free(proxy: (ProxyMixed<Prop['_T']>)) {
+    // no double free, please
+    if (null === this.proxies[proxy[Index]]) {
+      return
+    }
     proxy[MarkClean]?.()
     this.freeList.push(proxy)
     this.proxies[proxy[Index]] = null

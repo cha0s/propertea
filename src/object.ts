@@ -8,8 +8,8 @@ import {
   Initialize,
   Instance,
   MarkClean,
-  type ProxyCreatorConcreteConfiguration,
-  type ProxyCreatorMappedConfiguration,
+  type ProxyConstructorConcreteConfiguration,
+  type ProxyConstructorMappedConfiguration,
   type ProxyDecorator,
   type ProxyMixed,
   ProxyPropertea,
@@ -80,7 +80,7 @@ export class ProperteaObject<
 
   }
   concrete(
-    configuration: ProxyCreatorConcreteConfiguration,
+    configuration: ProxyConstructorConcreteConfiguration,
     isRoot = true,
   ) {
     const { properties } = this
@@ -145,7 +145,7 @@ export class ProperteaObject<
     isRoot,
   }: {
     defaults: Record<string, any>,
-    configuration: ProxyCreatorConcreteConfiguration & { data?: DataView },
+    configuration: ProxyConstructorConcreteConfiguration & { data?: DataView },
     isRoot: boolean,
   }) {
     const { properties } = this
@@ -360,7 +360,7 @@ export class ProperteaObject<
   }
 
   mapped(
-    configuration: ProxyCreatorMappedConfiguration,
+    configuration: ProxyConstructorMappedConfiguration,
     isRoot = true,
   ) {
     const { properties } = this

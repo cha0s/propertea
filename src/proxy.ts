@@ -42,15 +42,18 @@ export type ProxyMixedCreator<T> = (
  */
 export type ProxyOnDirtyCallback = (bit: number, proxy?: any) => void
 
-export type ProxyCreatorConcreteConfiguration = {
+export type ProxyConstructorConcreteConfiguration = {
   /**
    * Dirty buffer.
    */
   dirty: Uint8Array
+  /**
+   * Dirty notification callback.
+   */
   onDirty?: ProxyOnDirtyCallback
 }
 
-export type ProxyCreatorMappedConfiguration = {
+export type ProxyConstructorMappedConfiguration = {
   /**
    * Data buffer.
    */
@@ -59,6 +62,9 @@ export type ProxyCreatorMappedConfiguration = {
    * Dirty buffer.
    */
   dirty: Uint8Array
+  /**
+   * Dirty notification callback.
+   */
   onDirty?: ProxyOnDirtyCallback
 }
 
@@ -80,7 +86,7 @@ export abstract class ProxyPropertea<
    * @param isRoot Is this the root proxy? Internal use.
    */
   abstract concrete(
-    configuration: ProxyCreatorConcreteConfiguration,
+    configuration: ProxyConstructorConcreteConfiguration,
     isRoot: boolean,
   ): ProxyMixedCreator<T & Extension>
 
@@ -90,7 +96,7 @@ export abstract class ProxyPropertea<
    * @param isRoot Is this the root proxy? Internal use.
    */
   abstract mapped(
-    configuration: ProxyCreatorMappedConfiguration,
+    configuration: ProxyConstructorMappedConfiguration,
     isRoot: boolean,
   ): ProxyMixedCreator<T & Extension>
 
