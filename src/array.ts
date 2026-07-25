@@ -13,7 +13,7 @@ import {
   type ProxyDecorator,
   type ProxyMixed,
   type ProxyMixedCreator,
-  ProxyProperty,
+  ProxyPropertea,
   Set as ProperteaSet,
   ToJSON,
   ToJSONWithoutDefaults,
@@ -136,9 +136,9 @@ export class ProperteaArrayCodec<
 export class ProperteaArray<
   Element extends Propertea<unknown>,
   Extension extends object = {},
-  Stored = Element extends ProxyProperty<any> ? ProxyMixed<Element['_T'] & Element['_E']> : Element['_T'],
+  Stored = Element extends ProxyPropertea<any> ? ProxyMixed<Element['_T'] & Element['_E']> : Element['_T'],
 >
-  extends ProxyProperty<
+  extends ProxyPropertea<
     ProperteaArrayProxy<Element, Stored>,
     Extension,
     Iterable<Element['_T']> | undefined
@@ -168,7 +168,7 @@ export class ProperteaArray<
     const onDirtyCallback = configuration.onDirty ?? nop
     let dirtyMap = new WeakMap<any, Set<number>>()
     let pool: any
-    if (element instanceof ProxyProperty) {
+    if (element instanceof ProxyPropertea) {
       pool = new Pool(
         element,
         {
@@ -269,7 +269,7 @@ export class ProperteaArray<
       setLength(length: number): void
     }
 
-    if (element instanceof ProxyProperty) {
+    if (element instanceof ProxyPropertea) {
       ArrayProxy.prototype.setAt = function(key: number, value: DeepPartial<Element['_T']> | undefined) {
         if (undefined === value && key in this.$$array) {
           this.$$pool.free(this.$$array[key])
@@ -388,7 +388,7 @@ export class ProperteaArray<
 export function array<
   P extends Propertea<unknown>,
   E extends object = {},
-  Stored = P extends ProxyProperty<any> ? ProxyMixed<P['_T'] & P['_E']> : P['_T'],
+  Stored = P extends ProxyPropertea<any> ? ProxyMixed<P['_T'] & P['_E']> : P['_T'],
 >(
   options: { element: P; length?: number },
   decorate?: ProxyDecorator<ProperteaArrayProxy<P, Stored>, E>,

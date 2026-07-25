@@ -16,7 +16,7 @@ import {
   type ProxyCreatorConcreteConfiguration,
   type ProxyDecorator,
   type ProxyMixedCreator,
-  ProxyProperty,
+  ProxyPropertea,
   Set as ProperteaSet,
   ToJSON,
   ToJSONWithoutDefaults,
@@ -60,7 +60,7 @@ interface JsonProxyInterface extends ProxyClass {
 }
 
 export class ProperteaJson<Decorator extends object = {}>
-  extends ProxyProperty<JsonProxyInterface, Decorator, CrunchesJSONOutput>
+  extends ProxyPropertea<JsonProxyInterface, Decorator, CrunchesJSONOutput>
 {
   codec: CrunchesOptional<CrunchesJson>
   decorate: ProxyDecorator<JsonProxyInterface, Decorator> | undefined

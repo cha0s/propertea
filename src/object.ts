@@ -12,7 +12,7 @@ import {
   type ProxyCreatorMappedConfiguration,
   type ProxyDecorator,
   type ProxyMixed,
-  ProxyProperty,
+  ProxyPropertea,
   Set,
   ToJSON,
   ToJSONWithoutDefaults,
@@ -22,7 +22,7 @@ import { Propertea } from './propertea.ts'
 export type ProperteaObjectProps = Record<string, Propertea<unknown>>
 
 export type ProperteaObjectProxyInterface<Props extends Record<string, Propertea<any>>> = {
-  [K in keyof Props]: Props[K] extends ProxyProperty<any>
+  [K in keyof Props]: Props[K] extends ProxyPropertea<any>
     ? ProxyMixed<Props[K]['_T'] & Props[K]['_E']>
     : Props[K]['_T']
 }
@@ -45,7 +45,7 @@ export class ProperteaObject<
   P extends ProperteaObjectProps,
   Decorator extends object = {},
 >
-  extends ProxyProperty<ProperteaObjectProxyInterface<P>, Decorator>
+  extends ProxyPropertea<ProperteaObjectProxyInterface<P>, Decorator>
 {
 
   codec: CrunchesOptional<CrunchesObject<any>>
@@ -88,7 +88,7 @@ export class ProperteaObject<
     const defaults: Record<string, any> = {}
     for (const key in properties) {
       const property = properties[key]
-      defaults[key] = property instanceof ProxyProperty
+      defaults[key] = property instanceof ProxyPropertea
         ? property.concrete(configuration, false)
         : property.defaultValue
     }
@@ -103,7 +103,7 @@ export class ProperteaObject<
             const props = `
               get [${sanitizedKey}]() { return this[symbol][${sanitizedKey}]; }
               ${
-                property instanceof ProxyProperty
+                property instanceof ProxyPropertea
                   ? `
                     set [${sanitizedKey}](value) { this[symbol][${sanitizedKey}][Set](value); }
                   `
@@ -158,7 +158,7 @@ export class ProperteaObject<
           const property = properties[key]
           let keyDiff
           // recur
-          if (property instanceof ProxyProperty) {
+          if (property instanceof ProxyPropertea) {
             keyDiff = (this as any)[key][Diff]()
           }
           // check dirty bit
@@ -178,7 +178,7 @@ export class ProperteaObject<
       static markClean() {
         for (const key in properties) {
           const property = properties[key]
-          if (property instanceof ProxyProperty) {
+          if (property instanceof ProxyPropertea) {
             defaults[key].markClean()
           }
         }
@@ -187,7 +187,7 @@ export class ProperteaObject<
         let bit = this[DirtyOffset]
         for (const key in properties) {
           const property = properties[key]
-          if (property instanceof ProxyProperty) {
+          if (property instanceof ProxyPropertea) {
             (this as any)[key][MarkClean]()
           }
           else {
@@ -199,7 +199,7 @@ export class ProperteaObject<
       ;[ToJSON]() {
         const json: Record<string, any> = {}
         for (const key in properties) {
-          if (properties[key] instanceof ProxyProperty) {
+          if (properties[key] instanceof ProxyPropertea) {
             json[key] = (this as any)[key][ToJSON]()
           }
           else {
@@ -212,7 +212,7 @@ export class ProperteaObject<
         let json: Record<string, any> | undefined = undefined
         for (const key in properties) {
           let keyJson
-          if (properties[key] instanceof ProxyProperty) {
+          if (properties[key] instanceof ProxyPropertea) {
             keyJson = (this as any)[key][ToJSONWithoutDefaults](defaults?.[key])
           }
           else if ((defaults?.[key] ?? properties[key].defaultValue) !== (this as any)[key]) {
@@ -243,7 +243,7 @@ export class ProperteaObject<
           this[symbol] = {
             ${
               Object.entries(properties)
-                .filter(([, property]) => property instanceof ProxyProperty)
+                .filter(([, property]) => property instanceof ProxyPropertea)
                 .map(([key]) => `${JSON.stringify(key)}: undefined`).join(',')
             }
           }
@@ -257,7 +257,7 @@ export class ProperteaObject<
             // constant key access
             Object.keys(defaults)
               .map((key) => {
-                const isProxy = properties[key] instanceof ProxyProperty
+                const isProxy = properties[key] instanceof ProxyPropertea
                 return `{
                   const key = ${JSON.stringify(key)}
                   ${
@@ -302,7 +302,7 @@ export class ProperteaObject<
                       localValue = properties[${sanitizedKey}].defaultValue
                     }
                     ${
-                      properties[key] instanceof ProxyProperty
+                      properties[key] instanceof ProxyPropertea
                         ? `this[${sanitizedKey}][Initialize](localValue);`
                         : `this[${sanitizedKey}] = localValue;`
                     }
@@ -325,7 +325,7 @@ export class ProperteaObject<
                       localValue = properties[${sanitizedKey}].defaultValue
                     }
                     ${
-                      properties[key] instanceof ProxyProperty
+                      properties[key] instanceof ProxyPropertea
                         ? `this[${sanitizedKey}][Initialize](localValue);`
                         : `this[${sanitizedKey}] = localValue;`
                     }
@@ -368,7 +368,7 @@ export class ProperteaObject<
     // compute defaults
     for (const key in properties) {
       const property = properties[key]
-      defaults[key] = property instanceof ProxyProperty
+      defaults[key] = property instanceof ProxyPropertea
         ? property.mapped(configuration, false)
         : property.defaultValue
     }
@@ -385,7 +385,7 @@ export class ProperteaObject<
               const sanitizedKey = JSON.stringify(key)
               const props = `
                 ${
-                  property instanceof ProxyProperty
+                  property instanceof ProxyPropertea
                   ? `
                     get [${sanitizedKey}]() { return this[symbol][${sanitizedKey}]; }
                   `
@@ -398,7 +398,7 @@ export class ProperteaObject<
                   `
                 }
                 ${
-                  property instanceof ProxyProperty
+                  property instanceof ProxyPropertea
                     ? `
                       set [${sanitizedKey}](value) { this[symbol][${sanitizedKey}][Set](value); }
                     `

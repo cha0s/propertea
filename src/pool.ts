@@ -3,7 +3,7 @@ import { Memory, type TrackedMemory } from './memory.ts'
 import {
   Initialize,
   MarkClean,
-  ProxyProperty,
+  ProxyPropertea,
   type ProxyMixed,
   type ProxyMixedCreator,
   type ProxyOnDirtyCallback,
@@ -11,7 +11,7 @@ import {
 
 export const Index = Symbol('Index')
 
-type PoolProxyMixed<Prop extends ProxyProperty<any>> = (
+type PoolProxyMixed<Prop extends ProxyPropertea<any>> = (
   ProxyMixed<Prop['_T']> & { [Index]: number }
 )
 
@@ -22,7 +22,7 @@ type PoolViews = {
 }
 
 export class Pool<
-  Prop extends ProxyProperty<any>,
+  Prop extends ProxyPropertea<any>,
   UseWasm extends boolean = any,
 > {
 
@@ -52,7 +52,7 @@ export class Pool<
       useWasm?: UseWasm
     }
   ) {
-    if (!(property instanceof ProxyProperty)) {
+    if (!(property instanceof ProxyPropertea)) {
       throw new TypeError(`Propertea(pool): not a proxy property`)
     }
     const { useWasm = false, onDirty } = params ?? {}

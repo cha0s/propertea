@@ -13,7 +13,7 @@ import {
   type ProxyDecorator,
   type ProxyMixed,
   type ProxyMixedCreator,
-  ProxyProperty,
+  ProxyPropertea,
   Set as ProperteaSet,
   ToJSON,
   ToJSONWithoutDefaults,
@@ -49,9 +49,9 @@ export class ProperteaMap<
   Key extends Propertea<MapKey>,
   Value extends Propertea<unknown>,
   Extension extends object = {},
-  Stored = Value extends ProxyProperty<any> ? ProxyMixed<Value['_T'] & Value['_E']> : Value['_T'],
+  Stored = Value extends ProxyPropertea<any> ? ProxyMixed<Value['_T'] & Value['_E']> : Value['_T'],
 >
-  extends ProxyProperty<
+  extends ProxyPropertea<
     ProperteaMapProxy<Key['_T'], Value['_T'], Stored>,
     Extension,
     MapSettable<Key['_T'], Value['_T']>
@@ -84,7 +84,7 @@ export class ProperteaMap<
     const onDirtyCallback = configuration.onDirty ?? nop
     let dirtyMap = new WeakMap<any, Set<Key['_T']>>()
     let pool: any
-    if (valueProperty instanceof ProxyProperty) {
+    if (valueProperty instanceof ProxyPropertea) {
       pool = new Pool(
         valueProperty,
         {
@@ -178,7 +178,7 @@ export class ProperteaMap<
 
     }
 
-    if (valueProperty instanceof ProxyProperty) {
+    if (valueProperty instanceof ProxyPropertea) {
       MapProxy.prototype[ToJSON] = function(): MapEntry<Key['_T'], Value['_T']>[] {
         const json: any[] = []
         for (const entry of this.$$map) {
@@ -299,7 +299,7 @@ export function map<
   K extends Propertea<MapKey>,
   V extends Propertea<unknown>,
   E extends object = {},
-  Stored = V extends ProxyProperty<any> ? ProxyMixed<V['_T'] & V['_E']> : V['_T'],
+  Stored = V extends ProxyPropertea<any> ? ProxyMixed<V['_T'] & V['_E']> : V['_T'],
 >(
   options: { key: K; value: V },
   decorate?: ProxyDecorator<ProperteaMapProxy<K['_T'], V['_T'], Stored>, E>,
