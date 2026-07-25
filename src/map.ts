@@ -80,7 +80,7 @@ export class ProperteaMap<
   ) {
 
     const { defaultValue, valueProperty } = this
-    const { byteWidth, dirtyByteWidth } = valueProperty
+    const { byteWidth, dirtyBitWidth } = valueProperty
     const onDirtyCallback = configuration.onDirty ?? nop
     let dirtyMap = new WeakMap<any, Set<Key['_T']>>()
     let pool: any
@@ -89,7 +89,7 @@ export class ProperteaMap<
         valueProperty,
         {
           onDirty: (bit) => {
-            const proxy = pool.proxies[Math.trunc(bit / dirtyByteWidth)]
+            const proxy = pool.proxies[Math.trunc(bit / dirtyBitWidth)]
             if (proxy) {
               onDirtyCallback(proxy[MapSymbol][DirtyOffset], proxy[MapSymbol])
               proxy[MapSymbol][Dirty]().add(proxy[Key])
@@ -110,7 +110,7 @@ export class ProperteaMap<
       $$pool: any = pool
       constructor(indexOrDataOffset: number, dirtyOffset?: number) {
         this[DataOffset] = isRoot ? indexOrDataOffset * byteWidth : indexOrDataOffset
-        this[DirtyOffset] = isRoot ? indexOrDataOffset * dirtyByteWidth : dirtyOffset!
+        this[DirtyOffset] = isRoot ? indexOrDataOffset * dirtyBitWidth : dirtyOffset!
         dirtyMap.set(this, new Set())
         this[Initialize](defaultValue)
       }

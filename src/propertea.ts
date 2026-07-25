@@ -7,7 +7,7 @@ export abstract class Propertea<T, Default = T extends object ? Partial<T> : T> 
   byteWidth = 0
   abstract codec: CrunchesOptional<CrunchesType<unknown>>
   defaultValue: Default | undefined
-  dirtyByteWidth = 1
+  dirtyBitWidth = 1
 
   default(value: Default): this {
     this.defaultValue = value

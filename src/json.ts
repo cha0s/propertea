@@ -72,7 +72,7 @@ export class ProperteaJson<Decorator extends object = {}>
   }
 
   concrete(configuration: ProxyCreatorConcreteConfiguration, isRoot = true) {
-    const { byteWidth, defaultValue, dirtyByteWidth } = this
+    const { byteWidth, defaultValue, dirtyBitWidth } = this
     let patchMap = new WeakMap<any, CrunchesJSONOutput>()
     const onDirty = configuration.onDirty ?? (() => {})
 
@@ -84,7 +84,7 @@ export class ProperteaJson<Decorator extends object = {}>
 
       constructor(indexOrDataOffset: number, dirtyOffset?: number) {
         this[DataOffset] = isRoot ? indexOrDataOffset * byteWidth : indexOrDataOffset
-        this[DirtyOffset] = isRoot ? indexOrDataOffset * dirtyByteWidth : dirtyOffset!
+        this[DirtyOffset] = isRoot ? indexOrDataOffset * dirtyBitWidth : dirtyOffset!
         this[Initialize](defaultValue)
       }
 

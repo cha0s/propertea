@@ -164,7 +164,7 @@ export class ProperteaArray<
     isRoot = true,
   ) {
     const { defaultValue, element } = this
-    const { byteWidth, dirtyByteWidth } = element
+    const { byteWidth, dirtyBitWidth } = element
     const onDirtyCallback = configuration.onDirty ?? nop
     let dirtyMap = new WeakMap<any, Set<number>>()
     let pool: any
@@ -173,7 +173,7 @@ export class ProperteaArray<
         element,
         {
           onDirty: (bit) => {
-            const proxy = pool.proxies[Math.trunc(bit / dirtyByteWidth)]
+            const proxy = pool.proxies[Math.trunc(bit / dirtyBitWidth)]
             if (proxy) {
               onDirtyCallback(proxy[ArraySymbol][DirtyOffset], proxy[ArraySymbol])
               proxy[ArraySymbol][Dirty]().add(proxy[Key])
@@ -196,7 +196,7 @@ export class ProperteaArray<
 
       constructor(indexOrDataOffset: number, dirtyOffset?: number) {
         this[DataOffset] = isRoot ? indexOrDataOffset * byteWidth : indexOrDataOffset
-        this[DirtyOffset] = isRoot ? indexOrDataOffset * dirtyByteWidth : dirtyOffset!
+        this[DirtyOffset] = isRoot ? indexOrDataOffset * dirtyBitWidth : dirtyOffset!
         dirtyMap.set(this, new Set<number>())
         this[Initialize](defaultValue)
       }

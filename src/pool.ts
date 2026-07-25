@@ -57,9 +57,9 @@ export class Pool<
     }
     const { useWasm = false, onDirty } = params ?? {}
     this.property = property
-    const { dirtyByteWidth } = property
+    const { dirtyBitWidth } = property
     this.views.onDirty = (bit) => {
-      const index = Math.floor(bit / dirtyByteWidth)
+      const index = Math.floor(bit / dirtyBitWidth)
       onDirty?.(bit, this.proxies[index])
     }
     this.data = {
@@ -103,7 +103,7 @@ export class Pool<
         dirty.memory.grow(1)
         views.dirty = new Uint8Array(dirty.memory.buffer)
         dirty.nextGrow = Math.floor(
-          dirty.memory.buffer.byteLength / (this.property.dirtyByteWidth / 8),
+          dirty.memory.buffer.byteLength / (this.property.dirtyBitWidth / 8),
         )
       }
       // allocate a new proxy
@@ -122,7 +122,7 @@ export class Pool<
       byte_width: new WebAssembly.Global({ value: 'i32' }, this.property.byteWidth),
       data: this.data.memory,
       dirty: this.dirty.memory,
-      dirty_byte_width: new WebAssembly.Global({ value: 'i32' }, this.property.dirtyByteWidth),
+      dirty_byte_width: new WebAssembly.Global({ value: 'i32' }, this.property.dirtyBitWidth),
       length: this.length,
     }
   }

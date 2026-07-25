@@ -61,7 +61,7 @@ export class ProperteaObject<
     this.properties = {} as P
     const codecProperties: Record<string, CrunchesOptional<CrunchesType<unknown>>> = {}
     const byteWidths = []
-    let dirtyByteWidth = 0
+    let dirtyBitWidth = 0
     for (const key in properties) {
       const propertea = properties[key]
       this.properties[key] = propertea
@@ -69,12 +69,12 @@ export class ProperteaObject<
       codecProperties[key] = propertea.codec
       // accumulate widths
       byteWidths.push(propertea.byteWidth)
-      dirtyByteWidth += propertea.dirtyByteWidth
+      dirtyBitWidth += propertea.dirtyBitWidth
     }
     // store codec and computed widths
     this.codec = new CrunchesObject(codecProperties).optional()
     this.byteWidth = byteWidths.some((w) => 0 === w) ? 0 : byteWidths.reduce((l, r) => l + r, 0)
-    this.dirtyByteWidth = dirtyByteWidth
+    this.dirtyBitWidth = dirtyBitWidth
     // augment with instance symbol
     defineProperty(this, Instance, Symbol('Propertea.object.root'))
 
@@ -122,7 +122,7 @@ export class ProperteaObject<
                   `
               }
             `
-            dirtyIndex += property.dirtyByteWidth
+            dirtyIndex += property.dirtyBitWidth
             return props
           }).join('\n')}
         }
@@ -169,7 +169,7 @@ export class ProperteaObject<
             diff ??= {}
             diff[key] = keyDiff
           }
-          dirtyOffset += property.dirtyByteWidth
+          dirtyOffset += property.dirtyBitWidth
         }
         return diff
       }
@@ -193,7 +193,7 @@ export class ProperteaObject<
           else {
             configuration.dirty[bit >> 3] &= ~(1 << (bit & 7))
           }
-          bit += property.dirtyByteWidth
+          bit += property.dirtyBitWidth
         }
       }
       ;[ToJSON]() {
@@ -234,7 +234,7 @@ export class ProperteaObject<
       const {
         byteWidth,
         defaultValue,
-        dirtyByteWidth,
+        dirtyBitWidth,
         [Instance]: symbol,
       } = property
       return class FixedObjectProxy extends ObjectProxy {
@@ -250,7 +250,7 @@ export class ProperteaObject<
           let dataOffset = ${
             configuration.data ? (isRoot ? 'dataIndex * byteWidth' : 'dataIndex') : 0
           }
-          let dirtyOffset = ${(isRoot ? 'dataIndex * dirtyByteWidth' : 'dirtyIndex')}
+          let dirtyOffset = ${(isRoot ? 'dataIndex * dirtyBitWidth' : 'dirtyIndex')}
           ${configuration.data ? 'this[DataOffset] = dataOffset;' : ''}
           this[DirtyOffset] = dirtyOffset
           ${
@@ -268,7 +268,7 @@ export class ProperteaObject<
                   }
                   ${''/* increment offsets */}
                   ${configuration.data ? `dataOffset += properties[key].byteWidth;` : ''}
-                  dirtyOffset += properties[key].dirtyByteWidth
+                  dirtyOffset += properties[key].dirtyBitWidth
                 }`
               }).join('\n')
           }
@@ -335,7 +335,7 @@ export class ProperteaObject<
             }
           }
           let bit = this[DirtyOffset]
-          for (let i = 0; i < dirtyByteWidth; ++i) {
+          for (let i = 0; i < dirtyBitWidth; ++i) {
             if (0 === (configuration.dirty[bit >> 3] & 1 << (bit & 7))) {
               configuration.dirty[bit >> 3] |= 1 << (bit & 7)
               onDirtyCallback(bit, this)
@@ -420,7 +420,7 @@ export class ProperteaObject<
                 }
               `
               dataIndex += Number(property.byteWidth)
-              dirtyIndex += Number(property.dirtyByteWidth)
+              dirtyIndex += Number(property.dirtyBitWidth)
               return props
             }).join('\n')
 
