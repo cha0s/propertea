@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/cha0s/propertea/compare/propertea-v2.0.0...propertea-v2.0.1) (2026-07-25)
+
+
+### Miscellaneous Chores
+
+* bump crunches ([389e77d](https://github.com/cha0s/propertea/commit/389e77d4a6f5aa31d7e5bf2237a180fcb481acde))
+
 ## [2.0.0](https://github.com/cha0s/propertea/compare/propertea-v1.0.2...propertea-v2.0.0) (2026-07-17)
 
 
