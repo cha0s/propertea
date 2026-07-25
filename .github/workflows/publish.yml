@@ -1,20 +1,22 @@
 on:
-  push:
-    branches:
-      - master
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
 
-name: publish
+name: Publish
 jobs:
+
   check:
+    name: 🔐 Check that secrets exist
     runs-on: ubuntu-latest
     outputs:
-      test: ${{steps.secrets.outputs.test}}
+      test: ${{ steps.secrets.outputs.test }}
     steps:
       - id: secrets
-        name: Secrets check
+        name: 🔎 Secrets check
         shell: bash
         run: |
-          if [ -z "${{secrets.RELEASE_PLEASE_GITHUB_TOKEN}}" ] || [ -z "${{secrets.RELEASE_PLEASE_NPM_TOKEN}}" ]; then
+          if [ -z "${{secrets.RELEASE_PLEASE_GITHUB_TOKEN}}" ]; then
             echo >&2 "Secrets missing, skipping release.";
             echo "test=false" >> $GITHUB_OUTPUT;
           else
@@ -22,8 +24,9 @@ jobs:
           fi
 
   release-please:
+    name: 📤 Release Please
     needs: check
-    if: needs.check.outputs.test == 'true'
+    if: ${{ (needs.check.outputs.test == 'true') && (github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
 
     permissions:
@@ -33,26 +36,28 @@ jobs:
 
     steps:
 
-      - uses: GoogleCloudPlatform/release-please-action@v3
+      - uses: GoogleCloudPlatform/release-please-action@v4
         id: release
+        name: 🏷️ Make Release
         with:
-          token: ${{secrets.RELEASE_PLEASE_GITHUB_TOKEN}}
+          token: ${{ secrets.RELEASE_PLEASE_GITHUB_TOKEN }}
           command: manifest
 
-      - if: ${{steps.release.outputs.releases_created}}
-        uses: actions/checkout@v4
+      - if: ${{ steps.release.outputs.releases_created }}
+        name: ⬇️ Checkout repo
+        uses: actions/checkout@v7
 
-      - if: ${{steps.release.outputs.releases_created}}
-        uses: actions/setup-node@v4
+      - if: ${{ steps.release.outputs.releases_created }}
+        name: ⎔ Setup node
+        uses: actions/setup-node@v7
         with:
-          cache: "npm"
-          node-version: lts/iron
-          registry-url: "https://registry.npmjs.org"
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
 
-      - if: ${{steps.release.outputs.releases_created}}
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.RELEASE_PLEASE_NPM_TOKEN}}
+      - if: ${{ steps.release.outputs.releases_created }}
+        name: 🏗️ Build and Publish
         run: |
           npm ci
           npm run build
-          npm publish --provenance --access public
+          npm publish
