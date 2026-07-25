@@ -91,6 +91,7 @@ export class ProperteaArrayCodec<
     this.mapCodec = new CrunchesMap({ key: new CrunchesVarInt(), value: element, sparse: true })
   }
 
+  /* v8 ignore next 5 */
   bigEndian(): this {
     this.arrayCodec.bigEndian()
     this.mapCodec.bigEndian()
@@ -131,6 +132,7 @@ export class ProperteaArrayCodec<
     return written
   }
 
+  /* v8 ignore next 5 */
   littleEndian(): this {
     this.arrayCodec.littleEndian()
     this.mapCodec.littleEndian()
@@ -331,6 +333,7 @@ export class ProperteaArray<
             proxy[ArraySymbol] = this
           })
         }
+        /* v8 ignore next */
         if (length < oldLength) {
           onDirtyCallback(this[DirtyOffset], this)
         }
@@ -414,6 +417,7 @@ export class ProperteaArray<
     return Decorated as ProxyConstructorMixed<ProperteaArrayProxy<Element, Stored> & Extension>
   }
 
+  /* v8 ignore next */
   mapped(
     configuration: ProxyConstructorConcreteConfiguration,
     isRoot = true,

@@ -9,6 +9,13 @@ import {
   uint8,
 } from './primitives.ts'
 
+test('only accepts proxies', () => {
+  expect(() => {
+    // @ts-expect-error
+    new Pool(string())
+  }).toThrow()
+})
+
 test('data', () => {
   const pool = new Pool(object({
     x: object({
@@ -146,4 +153,15 @@ test('allocation reactivity', () => {
   pool.free(proxy)
   pool.allocate()
   expect(dirties).toEqual(4)
+})
+
+test('no double free', () => {
+  const pool = new Pool(object({
+    x: uint8(),
+  }))
+  const proxy = pool.allocate()
+  pool.free(proxy)
+  expect(pool.freeList).toHaveLength(1)
+  pool.free(proxy)
+  expect(pool.freeList).toHaveLength(1)
 })

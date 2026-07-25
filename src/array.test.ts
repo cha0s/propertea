@@ -4,7 +4,7 @@ import { array } from './array.ts'
 import { object } from './object.ts'
 import { Pool } from './pool.ts'
 import { uint8, uint32 } from  './primitives.ts'
-import { Diff, Initialize, MarkClean, Set, ToJSON } from './proxy.ts'
+import { Diff, Initialize, MarkClean, Set, ToJSON, ToJSONWithoutDefaults } from './proxy.ts'
 
 test('default value', () => {
   const property = array({
@@ -42,6 +42,7 @@ test('primitive', () => {
   const Proxy = property.concrete({ dirty: new Uint8Array(1) })
   const proxy = new Proxy(0)
   proxy.setAt(0, 1)
+  proxy.setAt(0, 1)
   expect(proxy.at(0)).toEqual(1)
   expect(proxy[Diff]()).toEqual({ 0: 1 })
 })
@@ -54,9 +55,11 @@ test('proxy', () => {
   const proxy = new Proxy(0)
   const value = { x: 4 }
   proxy.setAt(0, value)
+  proxy.setAt(0, value)
   const first = proxy.at(0)
   expect(proxy.at(0)).not.toBe(value)
   expect(proxy.at(0)![ToJSON]()).toEqual(value)
+  expect(proxy.at(0)![ToJSONWithoutDefaults]()).toEqual(value)
   proxy[Set]({ 0: { x: 5 }, 1: { x: 6 } })
   const second = proxy.at(0)
   const third = proxy.at(1)
@@ -88,6 +91,7 @@ test('within', () => {
   proxy.x[Initialize](value)
   expect(proxy.x[ToJSON]()).not.toBe(value)
   expect(proxy.x[ToJSON]()).toEqual(value)
+  expect(proxy.x[ToJSONWithoutDefaults]()).toEqual(value)
   proxy.x[MarkClean]()
   proxy.x.setAt(1, 3)
   expect(proxy[Diff]()).toEqual({ x: { 1: 3 } })
@@ -103,6 +107,9 @@ test('set diff', () => {
   proxy.setAt(1, 2)
   proxy[Set]({ 2: 3 })
   expect(proxy[Diff]()).toEqual({ 0: 1, 1: 2, 2: 3 })
+  proxy[MarkClean]()
+  proxy[Set](undefined)
+  expect(proxy[Diff]()).toEqual(undefined)
 })
 
 test('set with defaults', () => {
@@ -280,4 +287,69 @@ test('dirty reset on allocation', () => {
   pool.free(first)
   const second = pool.allocate()
   expect(second[Diff]()).to.deep.equal(undefined)
+})
+
+test('codec', () => {
+  const arrayPropertea = array({ element: object({ a: uint8(), b: uint8() }) })
+  const property = object({
+    foo: arrayPropertea,
+  })
+  const pool = new Pool(property)
+  const first = pool.allocate()
+  first.foo.setAt(0, { a: 1, b: 2 })
+  const { codec } = arrayPropertea
+  // diff
+  {
+    const fooDiff = first.foo[Diff]() as any
+    const view = new DataView(new ArrayBuffer(codec.sizeOf(fooDiff, 0)))
+    codec.encodeInto(fooDiff, view, 0)
+    const secondFoo = codec.decodeFrom(view, { byteOffset: 0 })
+    expect(fooDiff).to.deep.equal(secondFoo)
+    const second = pool.allocate({ foo: secondFoo as any })
+    expect(first[ToJSON]()).to.deep.equal(second[ToJSON]())
+  }
+  // array values
+  {
+    const values = [{ a: 1, b: 2 }]
+    const view = new DataView(new ArrayBuffer(codec.sizeOf(values, 0)))
+    codec.encodeInto(values, view, 0)
+    const secondFoo = codec.decodeFrom(view, { byteOffset: 0 })
+    expect(values).to.deep.equal(secondFoo)
+    const second = pool.allocate({ foo: secondFoo as any })
+    expect(first[ToJSON]()).to.deep.equal(second[ToJSON]())
+  }
+})
+
+test('iterable', () => {
+  const property = object({
+    foo: array({ element: object({ a: uint8(), b: uint8() }) }),
+  })
+  const pool = new Pool(property)
+  const first = pool.allocate()
+  const fooValue = { a: 1, b: 2 }
+  first.foo.setAt(0, fooValue)
+  const [{ a, b }] = first.foo
+  expect({ a, b }).to.deep.equal(fooValue)
+})
+
+test('includes', () => {
+  const property = object({
+    foo: array({ element: uint8() }),
+  })
+  const pool = new Pool(property)
+  const first = pool.allocate()
+  expect(first.foo.includes(1)).to.equal(false)
+  first.foo.setAt(0, 1)
+  expect(first.foo.includes(1)).to.equal(true)
+})
+
+test('length', () => {
+  const property = object({
+    foo: array({ element: uint8() }),
+  })
+  const pool = new Pool(property)
+  const first = pool.allocate()
+  expect(first.foo.length).to.equal(0)
+  first.foo.setAt(0, 1)
+  expect(first.foo.length).to.equal(1)
 })
