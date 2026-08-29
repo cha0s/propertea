@@ -25,10 +25,9 @@ export default defineConfig({
   ],
   test: {
     coverage: {
-      exclude: [
-        '{benchmark,dev,examples}/**',
-        ...coverageConfigDefaults.exclude,
-      ],
+      include: [
+        'src/**',
+      ]
     },
     execArgv: ['--expose-gc'],
     projects: [
