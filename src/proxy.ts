@@ -73,8 +73,9 @@ export type ProxyDecorator<T, E extends object> = (
 
 /**
  * Callback function passed to proxy creators for dirty notifications.
+ * @param bit The dirty bit (or bit offset) that changed.
  */
-export type ProxyOnDirtyCallback = (bit: number, proxy?: any) => void
+export type ProxyOnDirtyCallback = (bit: number) => void
 
 export interface ProxyConstructorConcreteConfiguration {
   /**

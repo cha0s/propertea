@@ -1,6 +1,6 @@
 import { CrunchesObject, CrunchesOptional, type CrunchesType } from 'crunches'
 
-import { type DeepPartial } from './internal-types.ts'
+import { type DeepPartial, type ProperteaValue } from './internal-types.ts'
 import {
   DataOffset,
   Diff,
@@ -11,7 +11,6 @@ import {
   type ProxyConstructorConcreteConfiguration,
   type ProxyConstructorMappedConfiguration,
   type ProxyDecorator,
-  type ProxyMixed,
   ProxyPropertea,
   Set,
   ToJSON,
@@ -22,9 +21,7 @@ import { Propertea } from './propertea.ts'
 export type ProperteaObjectProps = Record<string, Propertea<unknown>>
 
 export type ProperteaObjectProxyInterface<Props extends Record<string, Propertea<any>>> = {
-  [K in keyof Props]: Props[K] extends ProxyPropertea<any>
-    ? ProxyMixed<Props[K]['_T'] & Props[K]['_E']>
-    : Props[K]['_T']
+  [K in keyof Props]: ProperteaValue<Props[K]>
 }
 
 function codegen(code: string, context = {}) {
@@ -120,7 +117,7 @@ export class ProperteaObject<
                       if (previous !== value) {
                         const bit = ${dirtyIndex} + this[DirtyOffset]
                         configuration.dirty[bit >> 3] |= 1 << (bit & 7)
-                        onDirtyCallback(bit, this)
+                        onDirtyCallback(bit)
                       }
                     }
                   `
@@ -343,7 +340,7 @@ export class ProperteaObject<
           for (let i = 0; i < dirtyBitWidth; ++i) {
             if (0 === (configuration.dirty[bit >> 3] & 1 << (bit & 7))) {
               configuration.dirty[bit >> 3] |= 1 << (bit & 7)
-              onDirtyCallback(bit, this)
+              onDirtyCallback(bit)
             }
             bit += 1
           }
@@ -419,7 +416,7 @@ export class ProperteaObject<
                         if (previous !== value) {
                           const bit = ${dirtyIndex} + this[DirtyOffset]
                           configuration.dirty[bit >> 3] |= 1 << (bit & 7)
-                          onDirtyCallback(bit, this)
+                          onDirtyCallback(bit)
                         }
                       }
                     `

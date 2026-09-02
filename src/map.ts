@@ -2,6 +2,7 @@ import { CrunchesMap, CrunchesOptional } from 'crunches'
 
 import { Pool } from './pool.ts'
 import { Propertea } from './propertea.ts'
+import { type ProperteaValue } from './internal-types.ts'
 import {
   DataOffset,
   Diff,
@@ -11,7 +12,6 @@ import {
   type ProxyClass,
   type ProxyConstructorConcreteConfiguration,
   type ProxyDecorator,
-  type ProxyMixed,
   type ProxyConstructorMixed,
   ProxyPropertea,
   Set as ProperteaSet,
@@ -68,7 +68,7 @@ export class ProperteaMap<
   Key extends Propertea<MapKey>,
   Value extends Propertea<unknown>,
   Extension extends object = {},
-  Stored = Value extends ProxyPropertea<any> ? ProxyMixed<Value['_T'] & Value['_E']> : Value['_T'],
+  Stored = ProperteaValue<Value>,
 >
   extends ProxyPropertea<
     ProperteaMapProxy<Key['_T'], Value['_T'], Stored>,
@@ -110,7 +110,7 @@ export class ProperteaMap<
           onDirty: (bit) => {
             const proxy = pool.proxies[Math.trunc(bit / dirtyBitWidth)]
             if (proxy) {
-              onDirtyCallback(proxy[MapSymbol][DirtyOffset], proxy[MapSymbol])
+              onDirtyCallback(proxy[MapSymbol][DirtyOffset])
               proxy[MapSymbol][Dirty]().add(proxy[Key])
             }
           },
@@ -244,14 +244,14 @@ export class ProperteaMap<
           this.$$map.delete(key)
           this[Dirty]().add(key)
         }
-        onDirtyCallback(this[DirtyOffset], this)
+        onDirtyCallback(this[DirtyOffset])
       }
 
       MapProxy.prototype.delete = function(key: Key['_T']) {
         if (this.$$map.has(key)) {
           this.$$pool.free(this.get(key))
           this.$$map.delete(key)
-          onDirtyCallback(this[DirtyOffset], this)
+          onDirtyCallback(this[DirtyOffset])
           this[Dirty]().add(key)
         }
       }
@@ -313,14 +313,14 @@ export class ProperteaMap<
           this.$$map.delete(key)
           this[Dirty]().add(key)
         }
-        onDirtyCallback(this[DirtyOffset], this)
+        onDirtyCallback(this[DirtyOffset])
       }
 
       MapProxy.prototype.delete = function(key: Key['_T']) {
         if (this.$$map.has(key)) {
           this[Dirty]().add(key)
           this.$$map.delete(key)
-          onDirtyCallback(this[DirtyOffset], this)
+          onDirtyCallback(this[DirtyOffset])
         }
       }
 
@@ -333,7 +333,7 @@ export class ProperteaMap<
         this[Dirty]().add(key)
         this.$$map.set(key, value)
         if (previous !== value) {
-          onDirtyCallback(this[DirtyOffset], this)
+          onDirtyCallback(this[DirtyOffset])
         }
       }
 
@@ -373,7 +373,7 @@ export function map<
   K extends Propertea<MapKey>,
   V extends Propertea<unknown>,
   E extends object = {},
-  Stored = V extends ProxyPropertea<any> ? ProxyMixed<V['_T'] & V['_E']> : V['_T'],
+  Stored = ProperteaValue<V>,
 >(
   options: { key: K; value: V },
   decorate?: ProxyDecorator<ProperteaMapProxy<K['_T'], V['_T'], Stored>, E>,

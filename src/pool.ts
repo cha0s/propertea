@@ -41,7 +41,7 @@ type PoolViews = {
  */
 export class Pool<
   Prop extends ProxyPropertea<any>,
-  UseWasm extends boolean = any,
+  UseWasm extends boolean = false,
 > {
 
   /**
@@ -109,8 +109,7 @@ export class Pool<
     this.property = property
     const { dirtyBitWidth } = property
     this.views.onDirty = (bit) => {
-      const index = Math.floor(bit / dirtyBitWidth)
-      onDirty?.(bit, this.proxies[index])
+      onDirty?.(bit)
     }
     this.data = {
       memory: useWasm ? new WebAssembly.Memory({ initial: 0 }) : new Memory() as any,
@@ -137,11 +136,24 @@ export class Pool<
   }
 
   /**
-   * Allocate a new proxy by pulling from the fee pool or instantiating.
+   * Allocate a new proxy by pulling from the pool or instantiating.
    * @param value Default value used to initialize the proxy.
-   * @param initialize Custom initialization function to run before the proxy's [Initialize].
    * @returns The proxy.
    */
+  allocate(value?: DeepPartial<Prop['_T']>): PoolProxyMixed<Prop> & Prop['_E']
+  /**
+   * Allocate a new proxy and run an initializer on it before it is filled with
+   * its default value. `initialize` may attach extra fields to the instance;
+   * declare them via the `E` type parameter so the returned proxy is typed
+   * with them.
+   * @param value Default value used to initialize the proxy.
+   * @param initialize Initializer run before the proxy's `[Initialize]`.
+   * @returns The proxy, augmented with the fields set by `initialize`.
+   */
+  allocate<E extends object>(
+    value: DeepPartial<Prop['_T']> | undefined,
+    initialize: (_: PoolProxyMixed<Prop> & E) => void,
+  ): PoolProxyMixed<Prop> & Prop['_E'] & E
   allocate<E extends object = {}>(
     value?: DeepPartial<Prop['_T']>,
     initialize?: (_: PoolProxyMixed<Prop> & E) => void,

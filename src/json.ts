@@ -132,14 +132,14 @@ export class ProperteaJson<Decorator extends object = {}>
           this.value = patch
           patchMap.set(this, patch)
         }
-        onDirty(this[DirtyOffset], this)
+        onDirty(this[DirtyOffset])
       }
 
       ;[Initialize](value?: CrunchesJSONOutput) {
         this.value = value ?? {}
         this[MarkClean]()
         patchMap.set(this, value ?? {})
-        onDirty(this[DirtyOffset], this)
+        onDirty(this[DirtyOffset])
       }
 
       ;[MarkClean]() {

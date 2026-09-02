@@ -11,14 +11,13 @@ import {
   type ProxyClass,
   type ProxyConstructorConcreteConfiguration,
   type ProxyDecorator,
-  type ProxyMixed,
   type ProxyConstructorMixed,
   ProxyPropertea,
   Set as ProperteaSet,
   ToJSON,
   ToJSONWithoutDefaults,
 } from './proxy.ts'
-import { type DeepPartial } from './internal-types.ts'
+import { type DeepPartial, type ProperteaValue } from './internal-types.ts'
 
 const Key = Symbol('Propertea.array.Index')
 const ArraySymbol = Symbol('Propertea.array.Symbol')
@@ -164,7 +163,7 @@ export class ProperteaArrayCodec<
 export class ProperteaArray<
   Element extends Propertea<unknown>,
   Extension extends object = {},
-  Stored = Element extends ProxyPropertea<any> ? ProxyMixed<Element['_T'] & Element['_E']> : Element['_T'],
+  Stored = ProperteaValue<Element>,
 >
   extends ProxyPropertea<
     ProperteaArrayProxy<Element, Stored>,
@@ -203,7 +202,7 @@ export class ProperteaArray<
           onDirty: (bit) => {
             const proxy = pool.proxies[Math.trunc(bit / dirtyBitWidth)]
             if (proxy) {
-              onDirtyCallback(proxy[ArraySymbol][DirtyOffset], proxy[ArraySymbol])
+              onDirtyCallback(proxy[ArraySymbol][DirtyOffset])
               proxy[ArraySymbol][Dirty]().add(proxy[Key])
             }
           },
@@ -357,7 +356,7 @@ export class ProperteaArray<
           })
         }
         if (length < oldLength) {
-          onDirtyCallback(this[DirtyOffset], this)
+          onDirtyCallback(this[DirtyOffset])
         }
         this.$$array.length = length
       }
@@ -401,7 +400,7 @@ export class ProperteaArray<
           this.setAt(i, element.defaultValue)
         }
         if (length < oldLength) {
-          onDirtyCallback(this[DirtyOffset], this)
+          onDirtyCallback(this[DirtyOffset])
         }
         this.$$array.length = length
       }
@@ -411,7 +410,7 @@ export class ProperteaArray<
         const previous = this.$$array[index]
         this.$$array[index] = value
         if (previous !== value) {
-          onDirtyCallback(this[DirtyOffset], this)
+          onDirtyCallback(this[DirtyOffset])
         }
       }
 
@@ -461,7 +460,7 @@ export class ProperteaArray<
 export function array<
   P extends Propertea<unknown>,
   E extends object = {},
-  Stored = P extends ProxyPropertea<any> ? ProxyMixed<P['_T'] & P['_E']> : P['_T'],
+  Stored = ProperteaValue<P>,
 >(
   options: { element: P },
   decorate?: ProxyDecorator<ProperteaArrayProxy<P, Stored>, E>,
