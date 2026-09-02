@@ -184,7 +184,26 @@ export class ProperteaMap<
       }
 
       ;[ToJSONWithoutDefaults](_defaults?: any): MapEntry<Key['_T'], Value['_T']>[] | undefined {
-        return this[ToJSON]()
+        // A map equal to its default (empty, or holding only default values)
+        // is omitted from a defaults-free serialization.
+        if (0 === this.$$map.size) {
+          return
+        }
+        if (valueProperty instanceof ProxyPropertea) {
+          for (const entry of this.$$map) {
+            const valueJson = (entry[1] as { [ToJSONWithoutDefaults](): unknown } | undefined)?.[ToJSONWithoutDefaults]()
+            if (undefined !== entry[1] && undefined !== valueJson) {
+              return this[ToJSON]()
+            }
+          }
+          return
+        }
+        for (const entry of this.$$map) {
+          if (entry[1] !== valueProperty.defaultValue) {
+            return this[ToJSON]()
+          }
+        }
+        return
       }
     }
 
@@ -238,6 +257,10 @@ export class ProperteaMap<
       }
 
       MapProxy.prototype.set = function(key: Key['_T'], value: Value['_T']) {
+        if (undefined === value) {
+          this.delete(key)
+          return
+        }
         this[Dirty]().add(key)
         if (this.$$map.has(key)) {
           this.$$map.get(key)[ProperteaSet](value)
@@ -302,6 +325,10 @@ export class ProperteaMap<
       }
 
       MapProxy.prototype.set = function(key: Key['_T'], value: Value['_T']) {
+        if (undefined === value) {
+          this.delete(key)
+          return
+        }
         const previous = this.$$map.get(key)
         this[Dirty]().add(key)
         this.$$map.set(key, value)

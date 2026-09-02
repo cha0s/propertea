@@ -48,6 +48,18 @@ function applyPatch<T extends AnyObject, U extends AnyObject>(target: T, source:
   return output
 }
 
+function deepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) {
+    return true
+  }
+  if (isObject(a) && isObject(b)) {
+    const keys = Object.keys(a)
+    return keys.length === Object.keys(b).length
+      && keys.every((key) => deepEqual((a as AnyObject)[key], (b as AnyObject)[key]))
+  }
+  return false
+}
+
 interface JsonProxyInterface extends ProxyClass {
   value: CrunchesJSONOutput
 
@@ -100,7 +112,12 @@ export class ProperteaJson<Decorator extends object = {}>
           if (!isObject(this.value)) {
             this.value = {}
           }
-          this.value = applyPatch(this.value, patch)
+          const merged = applyPatch(this.value, patch)
+          // no-op patch: nothing changed
+          if (deepEqual(merged, this.value)) {
+            return
+          }
+          this.value = merged
           let mappedPatch = patchMap.get(this)
           if (!isObject(mappedPatch)) {
             mappedPatch = {}
@@ -109,6 +126,9 @@ export class ProperteaJson<Decorator extends object = {}>
           patchMap.set(this, mappedPatch)
         }
         else {
+          if (deepEqual(patch, this.value)) {
+            return
+          }
           this.value = patch
           patchMap.set(this, patch)
         }
@@ -130,9 +150,8 @@ export class ProperteaJson<Decorator extends object = {}>
         return this.value as CrunchesJSONOutput
       }
 
-      // TODO
       ;[ToJSONWithoutDefaults](_defaults?: any): CrunchesJSONOutput | undefined {
-        return this[ToJSON]()
+        return deepEqual(this.value, defaultValue) ? undefined : this[ToJSON]()
       }
 
       static markClean() {

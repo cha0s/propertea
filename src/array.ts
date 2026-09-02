@@ -262,7 +262,26 @@ export class ProperteaArray<
       }
 
       ;[ToJSONWithoutDefaults](_defaults?: any): Element['_T'][] | undefined {
-        return this[ToJSON]()
+        // An array equal to its default (empty, or holding only default elements)
+        // is omitted from a defaults-free serialization.
+        if (0 === this.$$array.length) {
+          return
+        }
+        if (element instanceof ProxyPropertea) {
+          for (const value of this.$$array) {
+            const json = (value as { [ToJSONWithoutDefaults](): unknown } | undefined)?.[ToJSONWithoutDefaults]()
+            if (undefined !== value && undefined !== json) {
+              return this[ToJSON]()
+            }
+          }
+          return
+        }
+        for (const value of this.$$array) {
+          if (value !== element.defaultValue) {
+            return this[ToJSON]()
+          }
+        }
+        return
       }
 
       ;[Symbol.iterator]() {

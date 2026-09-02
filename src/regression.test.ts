@@ -1,18 +1,19 @@
 import { describe, expect, test } from 'vitest'
 
 import { array } from './array.ts'
+import { json } from './json.ts'
 import { map } from './map.ts'
 import { object } from './object.ts'
 import { Index, Pool } from './pool.ts'
 import { uint8 } from './primitives.ts'
-import { Diff, MarkClean, ToJSON } from './proxy.ts'
+import { Diff, MarkClean, ToJSON, ToJSONWithoutDefaults } from './proxy.ts'
 
 /*
- * Regression tests for bugs found in the audit of this library.
- *
- * See `src/audit-notes.md` for the analysis behind each case. The tests are
- * grouped by root cause; every case documents the contract the API should
- * honor and would have failed against the pre-fix implementation.
+ * Regression tests for bugs found in the audit of this library, grouped by
+ * root cause. The tests in the top-level `describe` blocks encode the contract
+ * the API should honor; they failed against the pre-fix implementation and now
+ * guard against regressions. The trailing blocks document smaller semantic
+ * gaps that are not yet fixed.
  */
 
 describe('pool.free: freeing a proxy the pool does not own must not corrupt the registry', () => {
@@ -206,5 +207,90 @@ describe('undersized dirty buffers: dirty bits must not be silently lost', () =>
 
     expect(dirty[1] & 1).toBe(1) // correctly sized buffer records the bit
     expect(proxy[Diff]()).toEqual({ i: 42 })
+  })
+})
+
+describe('json patch semantics', () => {
+  /*
+   * `json` `[ProperteaSet]` merges each patch into a running patch map, so a
+   * subsequent identical patch re-fires `onDirty` and re-pollutes `[Diff]`.
+   * This makes a repeated identical patch observable as a change.
+   */
+  test('an identical json patch is not a change', () => {
+    let changes = 0
+    const Proxy = json().concrete({ dirty: new Uint8Array(1), onDirty: () => { changes += 1 } })
+    const proxy = new Proxy(0) // construction fires onDirty
+    changes = 0
+    proxy[MarkClean]()
+
+    proxy.patch({ a: 1 })
+    expect(changes).toBe(1)
+    expect(proxy[Diff]()).toEqual({ a: 1 })
+    proxy[MarkClean]()
+
+    proxy.patch({ a: 1 })   // same content
+    expect(changes).toBe(1) // onDirty must not fire again
+    expect(proxy[Diff]()).toBeUndefined()
+  })
+})
+
+describe('map set(undefined) semantics', () => {
+  /*
+   * `map.set(key, undefined)` is documented (and diff-set) to remove a key, but
+   * on a missing key it allocates a default element instead. A diff applies
+   * `undefined` as delete; the direct API must match.
+   */
+  test('map.set(key, undefined) on a missing key does not create a default element', () => {
+    const pool = new Pool(object({ m: map({ key: uint8(), value: object({ x: uint8().default(9) }) }) }))
+    const proxy = pool.allocate()
+
+    proxy.m.set(0, undefined)
+
+    expect(proxy.m.get(0)).toBeUndefined()
+    expect(proxy.m[ToJSON]()).toEqual([])
+  })
+
+  test('map.set(key, undefined) on an existing key removes it', () => {
+    const pool = new Pool(object({ m: map({ key: uint8(), value: uint8().default(9) }) }))
+    const proxy = pool.allocate()
+    proxy.m.set(0, 5)
+
+    proxy.m.set(0, undefined)
+
+    expect(proxy.m.get(0)).toBeUndefined() // PASSES for primitive (no default alloc)
+    expect(proxy.m[ToJSON]()).toEqual([])
+  })
+})
+
+describe('ToJSONWithoutDefaults omits default-valued containers', () => {
+  /*
+   * `[ToJSONWithoutDefaults]` omits scalar fields equal to their default; array,
+   * map and json properties used to always be included (their implementation
+   * aliased to a full `[ToJSON]`), even when the container held only default
+   * values. Containers equal to their default are now omitted too.
+   */
+  const withoutDefaults = (proxy: unknown): unknown =>
+    (proxy as { [ToJSONWithoutDefaults](): unknown })[ToJSONWithoutDefaults]()
+
+  test('an empty array equal to its default is omitted', () => {
+    const pool = new Pool(object({ a: uint8().default(1), arr: array({ element: uint8().default(7) }) }))
+    const proxy = pool.allocate() // a = 1 (default), arr = [] (default)
+
+    expect(withoutDefaults(proxy)).toBeUndefined()
+  })
+
+  test('an unchanged json property is omitted', () => {
+    const pool = new Pool(object({ a: uint8().default(1), j: json() }))
+    const proxy = pool.allocate() // a = 1 (default), j = {} (default)
+
+    expect(withoutDefaults(proxy)).toBeUndefined()
+  })
+
+  test('an array holding only element-default values is omitted', () => {
+    const pool = new Pool(object({ arr: array({ element: object({ x: uint8().default(7) }) }) }))
+    const proxy = pool.allocate()
+    proxy.arr.setLength(1) // element x = default 7
+
+    expect(withoutDefaults(proxy)).toBeUndefined()
   })
 })
