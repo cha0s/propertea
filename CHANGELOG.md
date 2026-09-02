@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.0.2](https://github.com/cha0s/propertea/compare/propertea-v2.0.1...propertea-v2.0.2) (2026-09-02)
+
+
+### Bug Fixes
+
+* edge cases ([10fdc6d](https://github.com/cha0s/propertea/commit/10fdc6dc81dd57e3198bd6b9c371fa8406343368))
+* edge cases ([57d0ecf](https://github.com/cha0s/propertea/commit/57d0ecf2cad41adec3949471e12fa91b8ccfc82d))
+
 ## [2.0.1](https://github.com/cha0s/propertea/compare/propertea-v2.0.0...propertea-v2.0.1) (2026-07-25)
 
 
