@@ -86,6 +86,7 @@ export class ProperteaObject<
     configuration: ProxyConstructorConcreteConfiguration,
     isRoot = true,
   ) {
+    this.validateDirtyBuffer(configuration.dirty)
     const { properties } = this
     // compute defaults
     const defaults: Record<string, any> = {}
@@ -367,6 +368,7 @@ export class ProperteaObject<
     configuration: ProxyConstructorMappedConfiguration,
     isRoot = true,
   ) {
+    this.validateDirtyBuffer(configuration.dirty)
     const { properties } = this
     const defaults: Record<string, any> = {}
     // compute defaults
@@ -444,6 +446,18 @@ export class ProperteaObject<
       }
     )
     return this.decorate ? this.decorate(Base) : Base
+  }
+
+  /**
+   * Guard against a dirty buffer too small to hold this object's dirty bits.
+   */
+  private validateDirtyBuffer(dirty: Uint8Array) {
+    const required = Math.ceil(this.dirtyBitWidth / 8)
+    if (dirty.byteLength < required) {
+      throw new RangeError(
+        `Propertea(object): dirty buffer must be at least ${required} byte(s) for ${this.dirtyBitWidth} dirty bit(s)`,
+      )
+    }
   }
 
 }

@@ -300,14 +300,15 @@ export class ProperteaArray<
     if (element instanceof ProxyPropertea) {
 
       ArrayProxy.prototype.setAt = function(index: number, value: DeepPartial<Element['_T']> | undefined) {
-        if (undefined === value && index in this.$$array) {
-          this.$$pool.free(this.$$array[index])
+        const previous = this.$$array[index]
+        if (undefined === value && undefined !== previous) {
+          this.$$pool.free(previous)
         }
         this[Dirty]().add(index)
         let localValue
-        if (this.$$array[index]) {
-          (this.$$array[index] as typeof element['_T'])[ProperteaSet](value)
-          localValue = this.$$array[index]
+        if (undefined !== previous) {
+          previous[ProperteaSet](value)
+          localValue = previous
         }
         else {
           localValue = this.$$pool.allocate(value, (proxy: any) => {
@@ -324,7 +325,10 @@ export class ProperteaArray<
       ArrayProxy.prototype.setLength = function(length: number) {
         const { length: oldLength } = this.$$array
         for (let i = this.$$array.length - 1; i >= length; --i) {
-          this.$$pool.free(this.$$array[i])
+          const value = this.$$array[i]
+          if (undefined !== value) {
+            this.$$pool.free(value)
+          }
           this[Dirty]().add(i)
         }
         for (let i = this.$$array.length; i < length; ++i) {
@@ -333,7 +337,6 @@ export class ProperteaArray<
             proxy[ArraySymbol] = this
           })
         }
-        /* v8 ignore next */
         if (length < oldLength) {
           onDirtyCallback(this[DirtyOffset], this)
         }
@@ -353,14 +356,16 @@ export class ProperteaArray<
       ArrayProxy.prototype[MarkClean] = function() {
         this[Dirty]().clear()
         for (const value of this.$$array) {
-          value[MarkClean]()
+          if (undefined !== value) {
+            value[MarkClean]()
+          }
         }
       }
 
       ArrayProxy.prototype[ToJSON] = function(): Element['_T'][] {
         const json = []
         for (const value of this.$$array) {
-          json.push((value as typeof element['_T'])[ToJSON]())
+          json.push(undefined === value ? undefined : (value as typeof element['_T'])[ToJSON]())
         }
         return json
       }

@@ -10,6 +10,9 @@ import {
 } from './proxy.ts'
 
 export const Index = Symbol('Index')
+const Owner = Symbol('Pool.owner')
+
+type PoolOwned = { [Owner]: Pool<ProxyPropertea<any>> }
 
 /**
  * Proxy property with pool index mixed in.
@@ -117,12 +120,18 @@ export class Pool<
       memory: useWasm ? new WebAssembly.Memory({ initial: 0 }) : new Memory() as any,
       nextGrow: 0,
     }
+    // Size the initial dirty view to the property's full bit span; `allocate` grows
+    // it (and re-points `views.dirty`) before creating further instances.
+    this.views.dirty = new Uint8Array(Math.ceil(dirtyBitWidth / 8))
     const method = property.isMappable ? 'mapped' : 'concrete'
+    const owner = this
     this.ProxyConstructor = class extends property[method](this.views, true) {
       ;[Index]: number
+      ;[Owner]: typeof owner
       constructor(index: number) {
         super(index)
         this[Index] = index
+        this[Owner] = owner
       }
     } as unknown as ProxyConstructorMixed<Prop['_T'] & Prop['_E']>
   }
@@ -189,6 +198,11 @@ export class Pool<
   markClean() {
     new Uint8Array(this.dirty.memory.buffer).fill(0)
     this.ProxyConstructor.markClean?.()
+    for (const proxy of this.proxies) {
+      if (proxy) {
+        proxy[MarkClean]?.()
+      }
+    }
   }
 
   /**
@@ -197,6 +211,9 @@ export class Pool<
    */
   free(proxy: (ProxyMixed<Prop['_T']>)) {
     // no double free, please
+    if (this !== (proxy as unknown as PoolOwned)[Owner]) {
+      throw new TypeError('Propertea(pool): proxy does not belong to this pool')
+    }
     if (null === this.proxies[proxy[Index]]) {
       return
     }

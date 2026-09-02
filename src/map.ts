@@ -265,7 +265,9 @@ export class ProperteaMap<
       MapProxy.prototype[MarkClean] = function() {
         this[Dirty]().clear()
         for (const entry of this.$$map) {
-          entry[1][MarkClean]()
+          if (undefined !== entry[1]) {
+            entry[1][MarkClean]()
+          }
         }
       }
 
